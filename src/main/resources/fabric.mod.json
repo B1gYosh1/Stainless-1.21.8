@@ -1,0 +1,28 @@
+{
+  "schemaVersion": 1,
+  "id": "auto-concrete-addon",
+  "version": "${version}",
+  "name": "Xenon's Addon",
+  "description": "Builds a 2-block obsidian pillar and drops concrete on enemies.",
+  "authors": [
+    "Xenon_ne"
+  ],
+  "contact": {
+    "repo": "https://github.com/Xenoneee/auto-concrete-addon"
+  },
+  "icon": "assets/template/icon.png",
+  "environment": "client",
+  "entrypoints": {
+    "meteor": [
+      "com.autoconcrete.addon.Xenon"
+    ]
+  },
+  "custom": {
+    "meteor-client:color": "255,182,193"
+  },
+  "depends": {
+    "java": ">=21",
+    "minecraft": ["${mc_version}"],
+    "meteor-client": "*"
+  }
+}
