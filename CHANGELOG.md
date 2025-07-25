@@ -2,6 +2,44 @@
 
 ---
 
+##  Changes in v0.1.5
+
+## v0.1.5 - July 25th 2025
+### Added
+
+### AntiConcreteDetection
+- Detects buttons or torches placed under nearby enemies' feet.
+  - Breaks detected blocks with left-click, with toggle for `Tap to break` vs `Hold to break`.
+  - Includes `Rotate` toggle for snapping to face target block.
+  - `Hold to break` now only targets the block at the enemy's feet (inside lower hitbox), preventing accidental block breaking based on camera direction.
+
+### AutoConcrete
+- `Only In Hole` setting for `AutoConcrete`:
+    - Ensures concrete only drops if the target is fully surrounded by blocks at their feet.
+- Added more support for falling blocks:
+    - Concrete Powder
+    - Gravel
+    - Sand
+    - Red Sand
+    - Suspicious Sand
+    - Suspicious Gravel
+
+### Fixed
+- Crash caused by null concrete positions in `AutoConcrete`.
+- Crash when using `AntiConcreteDetection` and `AutoConcrete` simultaneously due to missing null checks and out-of-bounds access.
+- `Hold to break` logic no longer breaks random blocks based on view direction—targeting is now precise to block under enemy.
+
+### Changed
+- Separated `Anti-AntiConcrete` functionality from `AntiConcrete` into its own module (`AntiConcreteDetection`).
+- Improved obsidian pillar placement logic and support check before dropping blocks.
+- Added safe loop over concrete position array with null checks.
+- Renamed `AntiAntiConcrete` to `AntiConcreteDetection` for clarity and PVP-themed naming.
+
+
+
+
+---
+
 ##  Changes in v0.1.4
 
 ## v0.1.4 - July 24th 2025
