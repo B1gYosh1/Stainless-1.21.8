@@ -1,5 +1,9 @@
 # Changelog
 
+---
+
+##  Changes in v0.1.3
+
 ## v0.1.4 - July 24th 2025
 
 ### AutoConcrete
@@ -21,3 +25,13 @@
 
 ---
 
+##  Changes in v0.1.3
+
+## v0.1.3 - July 23rd 2025
+
+-  Fixed crash on init due to `Items` not loading
+-  Updated `fabric.mod.json` and `gradle.properties`
+-  Version number now displays correctly
+-  Compatible with **Minecraft 1.21.1** & **Meteor Client 0.5.8**
+
+> This version silently swaps and restores buttons from inventory (AntiConcrete module) and supports airplace toggling (AutoConcrete module).
