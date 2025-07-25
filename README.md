@@ -12,22 +12,30 @@ Automatically builds a vertical obsidian pillar beside a nearby target and drops
 - Builds a **2–4 block obsidian pillar** on one side of a target's surround.
 - Drops **up to 3 concrete powder blocks** at once using the `Concrete Count` slider.
 - **Air Place** mode allows dropping without support blocks.
-- Detects **End Crystals** above the target to adapt obsidian pillar for better placement.
+- Detects **End Crystals** by the target to adapt obsidian pillar for better placement.
 - Reuses existing obsidian pillars if detected by target.
 - Smart resets when the target moves.
 - Can automatically **disable after one use**.
-
+- Support for falling blocks:
+    - Concrete Powder
+    - Gravel
+    - Sand
+    - Red Sand
+    - Suspicious Sand
+    - Suspicious Gravel
+  
 **Settings:**
 - `Range`: Target detection distance.
 - `Concrete Count`: Number of concrete blocks to place (1–3).
 - `Pillar Delay`: Delay between obsidian block placements.
-- `Concrete Delay`: Delay after dropping concrete.
+- `Drop Delay`: Delay after dropping concrete.
 - `Rotate`: Rotate player toward block placements.
 - `Detect Crystals`: Raises pillar height if End Crystal detected.
 - `Air Place`: Enable dropping concrete in air.
 - `Place Support`: Toggle obsidian pillar placement when Air Place is disabled.
 - `Disable On Use`: Turns off the module automatically after one concrete drop.
-
+- `Only In Hole` :Ensures concrete only drops if the target is fully surrounded by blocks at their feet.
+  
 ---
 
 ###  AntiConcrete
@@ -35,7 +43,6 @@ Automatically places a button beneath your feet to prevent concrete displacement
 
 - Detects when an enemy is nearby or when concrete is falling above you.
 - Places any valid **button type** under you instantly.
-- **Anti-AntiConcrete Mode** detects and breaks buttons or torches under enemies.
 - Smart mode places only when concrete is detected above.
 - **Silent Swap** system moves button from inventory to hotbar and returns it after use.
 - Rotates toward placement or target blocks when enabled.
@@ -46,9 +53,18 @@ Automatically places a button beneath your feet to prevent concrete displacement
 - `Silent Inventory Swap`: Enable silent hotbar swapping.
 - `Hotbar Slot`: Which hotbar slot to use for button swapping.
 - `Return Delay`: How long to wait before returning the button to inventory from hotbar.
-- `Anti-AntiConcrete`: Breaks enemy buttons/torches under their feet.
-- `Break Mode`: `Tap` (click once) or `Hold` (hold attack).
 - `Rotate`: Rotate toward blocks when placing or breaking.
+
+---
+
+### AntiConcreteDetection
+- Detects buttons or torches placed under nearby enemies' feet.
+    - Breaks detected blocks with left-click, with toggle for `Tap to break` vs `Hold to break`.
+    - Includes `Rotate` toggle for snapping to face target block.
+
+**Settings:**
+- `Break Mode` : `Tap to break` & `Hold to break` Methods used when breaking targeted button/torch(s) under enemies' feet
+- `Rotate` : Rotate player toward block being targeted.
 
 ---
 
