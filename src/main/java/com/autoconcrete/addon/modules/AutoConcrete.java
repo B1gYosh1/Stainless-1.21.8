@@ -27,14 +27,14 @@ public class AutoConcrete extends Module {
         .name("range").defaultValue(4).min(0).sliderMax(6).build());
 
     private final Setting<Integer> concreteCount = sgGeneral.add(new IntSetting.Builder()
-        .name("concrete-count").description("How many concrete blocks to drop at once.")
+        .name("concrete-count").description("How many falling blocks to drop at once.")
         .defaultValue(1).min(1).max(3).sliderMax(3).build());
 
     private final Setting<Integer> pillarDelay = sgGeneral.add(new IntSetting.Builder()
         .name("pillar-delay").defaultValue(30).min(0).sliderMax(100).build());
 
     private final Setting<Integer> concreteDelay = sgGeneral.add(new IntSetting.Builder()
-        .name("concrete-delay").defaultValue(50).min(0).sliderMax(100).build());
+        .name("drop-delay").defaultValue(50).min(0).sliderMax(100).build());
 
     private final Setting<Boolean> rotate = sgGeneral.add(new BoolSetting.Builder()
         .name("rotate").defaultValue(true).build());
@@ -49,8 +49,14 @@ public class AutoConcrete extends Module {
         .name("place-support").defaultValue(true).build());
 
     private final Setting<Boolean> disableOnUse = sgGeneral.add(new BoolSetting.Builder()
-        .name("disable-on-use").description("Turns off the module after placing concrete.")
+        .name("disable-on-use").description("Turns off the module after placing falling blocks.")
         .defaultValue(false).build());
+
+    private final Setting<Boolean> onlyInHole = sgGeneral.add(new BoolSetting.Builder()
+        .name("only-in-hole")
+        .description("Only place blocks if the target has blocks on all 4 sides.")
+        .defaultValue(false)
+        .build());
 
     private PlayerEntity target;
     private BlockPos basePos;
@@ -61,7 +67,7 @@ public class AutoConcrete extends Module {
     private int cooldown = 0;
 
     public AutoConcrete() {
-        super(Xenon.XENON_CATEGORY, "auto-concrete", "Drops concrete above enemy's head with optional obsidian pillar.");
+        super(Xenon.XENON_CATEGORY, "auto-concrete", "Drops falling blocks (concrete, sand, gravel, etc.) above enemies' heads.");
     }
 
     @Override
@@ -98,6 +104,8 @@ public class AutoConcrete extends Module {
 
         BlockPos targetPos = target.getBlockPos();
 
+        if (onlyInHole.get() && !isInHole(targetPos)) return;
+
         if (lastTargetPos != null && !lastTargetPos.equals(targetPos)) {
             info("Target moved. Resetting.");
             reset();
@@ -105,9 +113,17 @@ public class AutoConcrete extends Module {
         lastTargetPos = targetPos;
 
         FindItemResult obsidian = InvUtils.findInHotbar(stack -> Block.getBlockFromItem(stack.getItem()) == Blocks.OBSIDIAN);
-        FindItemResult concrete = InvUtils.findInHotbar(stack -> Block.getBlockFromItem(stack.getItem()).getTranslationKey().contains("concrete_powder"));
+        FindItemResult fallingBlock = InvUtils.findInHotbar(stack -> {
+            Block block = Block.getBlockFromItem(stack.getItem());
+            return block == Blocks.SAND
+                || block == Blocks.RED_SAND
+                || block == Blocks.GRAVEL
+                || block == Blocks.SUSPICIOUS_SAND
+                || block == Blocks.SUSPICIOUS_GRAVEL
+                || block.getTranslationKey().contains("concrete_powder");
+        });
 
-        if (!concrete.found() || (!obsidian.found() && !airPlace.get())) return;
+        if (!fallingBlock.found() || (!obsidian.found() && !airPlace.get())) return;
 
         boolean crystalPresent = detectCrystals.get() && isCrystalOnSurround(target);
         currentPillarHeight = 1 + concreteCount.get();
@@ -131,7 +147,7 @@ public class AutoConcrete extends Module {
                         }
                         if (clear) {
                             placedDirection = dir;
-                            basePos = side.up(); // Start pillar above surround
+                            basePos = side.up();
                             break;
                         }
                     }
@@ -140,7 +156,6 @@ public class AutoConcrete extends Module {
 
             if (basePos == null || placedDirection == null) return;
 
-            // Place obsidian pillar
             boolean allPlaced = true;
             for (int i = 0; i < currentPillarHeight; i++) {
                 BlockPos pos = basePos.up(i);
@@ -154,15 +169,14 @@ public class AutoConcrete extends Module {
 
             if (!allPlaced) return;
 
-            // FIXED: Place concrete beside pillar above target
             for (int i = 0; i < concreteCount.get(); i++) {
                 concretePositions[i] = targetPos.up(2 + i);
             }
         }
 
         for (BlockPos pos : concretePositions) {
-            if (mc.world.getBlockState(pos).isReplaceable()) {
-                BlockUtils.place(pos, concrete, rotate.get(), 0);
+            if (pos != null && mc.world.getBlockState(pos).isReplaceable()) {
+                BlockUtils.place(pos, fallingBlock, rotate.get(), 0);
             }
         }
 
@@ -186,6 +200,13 @@ public class AutoConcrete extends Module {
             }
         }
         return false;
+    }
+
+    private boolean isInHole(BlockPos pos) {
+        for (Direction dir : Direction.Type.HORIZONTAL) {
+            if (mc.world.getBlockState(pos.offset(dir)).isAir()) return false;
+        }
+        return true;
     }
 
     @Override

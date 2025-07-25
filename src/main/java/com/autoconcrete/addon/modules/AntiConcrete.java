@@ -15,14 +15,9 @@ import net.minecraft.block.Block;
 import net.minecraft.block.Blocks;
 import net.minecraft.entity.Entity;
 import net.minecraft.entity.FallingBlockEntity;
-import net.minecraft.entity.player.PlayerEntity;
 import net.minecraft.item.Item;
-import net.minecraft.item.ItemStack;
-import net.minecraft.item.Items;
-import net.minecraft.util.Hand;
 import net.minecraft.util.math.BlockPos;
 import net.minecraft.util.math.Box;
-import net.minecraft.util.math.Direction;
 
 public class AntiConcrete extends Module {
     private final SettingGroup sgGeneral = settings.getDefaultGroup();
@@ -68,24 +63,9 @@ public class AntiConcrete extends Module {
         .build()
     );
 
-    private final Setting<Boolean> antiAntiConcrete = sgGeneral.add(new BoolSetting.Builder()
-        .name("anti-anticoncrete")
-        .description("Breaks buttons/torches under enemies.")
-        .defaultValue(false)
-        .build()
-    );
-
-    private final Setting<BreakMode> breakMode = sgGeneral.add(new EnumSetting.Builder<BreakMode>()
-        .name("break-mode")
-        .description("How to break enemy blocks.")
-        .defaultValue(BreakMode.Tap)
-        .visible(antiAntiConcrete::get)
-        .build()
-    );
-
     private final Setting<Boolean> rotate = sgGeneral.add(new BoolSetting.Builder()
         .name("rotate")
-        .description("Rotate toward blocks when placing or targeting.")
+        .description("Rotate toward blocks when placing.")
         .defaultValue(true)
         .build()
     );
@@ -95,7 +75,7 @@ public class AntiConcrete extends Module {
     private boolean waitingToReturn = false;
 
     public AntiConcrete() {
-        super(Xenon.XENON_CATEGORY, "anti-concrete", "Places a button under yourself and breaks enemy buttons.");
+        super(Xenon.XENON_CATEGORY, "anti-concrete", "Places a button under yourself when enemies are nearby or dropping blocks.");
     }
 
     @EventHandler
@@ -105,27 +85,6 @@ public class AntiConcrete extends Module {
                 int hotbarSlot = hotbarSlotSetting.get() - 1;
                 InvUtils.move().from(hotbarSlot).to(originalSlot);
                 waitingToReturn = false;
-            }
-        }
-
-        if (antiAntiConcrete.get()) {
-            for (Entity entity : mc.world.getPlayers()) {
-                if (!(entity instanceof PlayerEntity player)) continue;
-                if (player == mc.player || player.isSpectator() || player.isCreative()) continue;
-
-                BlockPos under = player.getBlockPos();
-                Block targetBlock = mc.world.getBlockState(under).getBlock();
-                if (isButtonBlock(targetBlock) || isTorchBlock(targetBlock)) {
-                    if (rotate.get()) Rotations.rotate(Rotations.getYaw(under.toCenterPos()), Rotations.getPitch(under.toCenterPos()));
-                    if (breakMode.get() == BreakMode.Hold) {
-                        mc.options.attackKey.setPressed(true);
-                    } else {
-                        mc.options.attackKey.setPressed(false);
-                        mc.interactionManager.attackBlock(under, Direction.UP);
-                        mc.player.swingHand(Hand.MAIN_HAND);
-                    }
-                    break;
-                }
             }
         }
 
@@ -165,7 +124,10 @@ public class AntiConcrete extends Module {
             return;
         }
 
-        if (rotate.get()) Rotations.rotate(Rotations.getYaw(currentPos.toCenterPos()), Rotations.getPitch(currentPos.toCenterPos()));
+        if (rotate.get()) {
+            Rotations.rotate(Rotations.getYaw(currentPos.toCenterPos()), Rotations.getPitch(currentPos.toCenterPos()));
+        }
+
         BlockUtils.place(currentPos, button, rotate.get(), 0);
 
         if (swapped && originalSlot != -1) {
@@ -175,10 +137,10 @@ public class AntiConcrete extends Module {
     }
 
     private boolean isConcreteAbove() {
-        boolean detected = false;
+        BlockPos base = mc.player.getBlockPos();
 
         for (int i = 1; i <= 3; i++) {
-            if (isConcretePowderBlock(mc.player.getBlockPos().up(i))) detected = true;
+            if (isFallingTrapBlock(mc.world.getBlockState(base.up(i)).getBlock())) return true;
         }
 
         Box box = new Box(
@@ -188,18 +150,14 @@ public class AntiConcrete extends Module {
 
         for (Entity entity : mc.world.getOtherEntities(null, box)) {
             if (entity instanceof FallingBlockEntity falling) {
-                if (isConcretePowderBlock(falling.getBlockState().getBlock())) detected = true;
+                if (isFallingTrapBlock(falling.getBlockState().getBlock())) return true;
             }
         }
 
-        return detected;
+        return false;
     }
 
-    private boolean isConcretePowderBlock(BlockPos pos) {
-        return isConcretePowderBlock(mc.world.getBlockState(pos).getBlock());
-    }
-
-    private boolean isConcretePowderBlock(Block block) {
+    private boolean isFallingTrapBlock(Block block) {
         return block.toString().contains("concrete_powder") ||
             block == Blocks.GRAVEL || block == Blocks.SAND || block == Blocks.RED_SAND ||
             block == Blocks.SUSPICIOUS_SAND || block == Blocks.SUSPICIOUS_GRAVEL;
@@ -209,10 +167,6 @@ public class AntiConcrete extends Module {
         return block.toString().toLowerCase().contains("button");
     }
 
-    private boolean isTorchBlock(Block block) {
-        return block.toString().toLowerCase().contains("torch");
-    }
-
     private boolean isButton(Item item) {
         return item.toString().toLowerCase().contains("button");
     }
@@ -220,10 +174,5 @@ public class AntiConcrete extends Module {
     public enum Mode {
         Strict,
         Smart
-    }
-
-    public enum BreakMode {
-        Tap,
-        Hold
     }
 }
