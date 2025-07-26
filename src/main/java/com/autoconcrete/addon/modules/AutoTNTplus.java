@@ -27,72 +27,35 @@ import net.minecraft.util.math.Vec3d;
 import static com.autoconcrete.addon.Xenon.XENON_CATEGORY;
 
 public class AutoTNTplus extends Module {
-    // Settings
     private final SettingGroup sgGeneral = settings.getDefaultGroup();
 
     private final Setting<Double> range = sgGeneral.add(new DoubleSetting.Builder()
-        .name("target-range")
-        .description("How far to search for targets.")
-        .defaultValue(4)
-        .min(0)
-        .sliderMax(6)
-        .build());
+        .name("target-range").defaultValue(4).min(0).sliderMax(6).build());
 
     private final Setting<Integer> pillarDelay = sgGeneral.add(new IntSetting.Builder()
-        .name("pillar-delay")
-        .description("Delay between obsidian pillar block placements.")
-        .defaultValue(30)
-        .min(0)
-        .sliderMax(100)
-        .build());
+        .name("pillar-delay").defaultValue(30).min(0).sliderMax(100).build());
 
     private final Setting<Integer> tntDelay = sgGeneral.add(new IntSetting.Builder()
-        .name("tnt-delay")
-        .description("Delay after placing TNT.")
-        .defaultValue(50)
-        .min(0)
-        .sliderMax(100)
-        .build());
+        .name("tnt-delay").defaultValue(50).min(0).sliderMax(100).build());
 
     private final Setting<Integer> ignitionDelay = sgGeneral.add(new IntSetting.Builder()
-        .name("ignition-delay")
-        .description("Delay in ticks before igniting the TNT after placement.")
-        .defaultValue(1)
-        .min(0)
-        .sliderMax(20)
-        .build());
+        .name("ignition-delay").defaultValue(1).min(0).sliderMax(20).build());
 
     private final Setting<Boolean> rotate = sgGeneral.add(new BoolSetting.Builder()
-        .name("rotate")
-        .description("Rotate towards TNT before igniting.")
-        .defaultValue(true)
-        .build());
+        .name("rotate").defaultValue(true).build());
 
     private final Setting<Boolean> useFlintAndSteel = sgGeneral.add(new BoolSetting.Builder()
-        .name("Flint & Steel")
-        .description("Use Flint and Steel to ignite TNT.")
-        .defaultValue(true)
-        .build());
+        .name("Flint & Steel").defaultValue(true).build());
 
     private final Setting<Boolean> useFireCharge = sgGeneral.add(new BoolSetting.Builder()
-        .name("Fire Charge")
-        .description("Use Fire Charge to ignite TNT.")
-        .defaultValue(false)
-        .build());
+        .name("Fire Charge").defaultValue(false).build());
 
     private final Setting<Boolean> airPlace = sgGeneral.add(new BoolSetting.Builder()
-        .name("Air Place")
-        .description("Places TNT without requiring support.")
-        .defaultValue(false)
-        .build());
+        .name("Air Place").defaultValue(false).build());
 
     private final Setting<Boolean> placeSupport = sgGeneral.add(new BoolSetting.Builder()
-        .name("Place Support")
-        .description("Places an obsidian pillar when air place is unavailable.")
-        .defaultValue(true)
-        .build());
+        .name("Place Support").defaultValue(true).build());
 
-    // State
     private PlayerEntity target;
     private BlockPos basePos;
     private BlockPos tntPos;
@@ -101,6 +64,12 @@ public class AutoTNTplus extends Module {
     private int currentPillarHeight = 2;
     private int cooldown = 0;
     private int igniteTicks = 0;
+
+    // Chat cooldowns (2 seconds = 40 ticks)
+    private int tntCooldown = 0;
+    private int obsidianCooldown = 0;
+    private int igniterCooldown = 0;
+    private int movedCooldown = 0;
 
     public AutoTNTplus() {
         super(XENON_CATEGORY, "AutoTNTplus", "Places obsidian pillars, places TNT, and ignites it automatically.");
@@ -133,6 +102,12 @@ public class AutoTNTplus extends Module {
             return;
         }
 
+        // Decrement chat cooldowns
+        if (tntCooldown > 0) tntCooldown--;
+        if (obsidianCooldown > 0) obsidianCooldown--;
+        if (igniterCooldown > 0) igniterCooldown--;
+        if (movedCooldown > 0) movedCooldown--;
+
         if (TargetUtils.isBadTarget(target, range.get())) {
             target = TargetUtils.getPlayerTarget(range.get(), SortPriority.LowestHealth);
             if (TargetUtils.isBadTarget(target, range.get())) return;
@@ -142,7 +117,10 @@ public class AutoTNTplus extends Module {
         BlockPos targetPos = target.getBlockPos();
 
         if (lastTargetPos != null && !lastTargetPos.equals(targetPos)) {
-            info("Target moved. Resetting.");
+            if (movedCooldown == 0) {
+                info("Target moved. Resetting.");
+                movedCooldown = 40;
+            }
             reset();
         }
         lastTargetPos = targetPos;
@@ -151,12 +129,18 @@ public class AutoTNTplus extends Module {
         FindItemResult tnt = InvUtils.findInHotbar(stack -> Block.getBlockFromItem(stack.getItem()) == Blocks.TNT);
 
         if (!tnt.found()) {
-            warning("No TNT found in hotbar!");
+            if (tntCooldown == 0) {
+                warning("No TNT found in hotbar!");
+                tntCooldown = 40;
+            }
             return;
         }
 
         if (!airPlace.get() && !obsidian.found() && placeSupport.get()) {
-            warning("Missing obsidian for pillar.");
+            if (obsidianCooldown == 0) {
+                warning("Missing obsidian for pillar.");
+                obsidianCooldown = 40;
+            }
             return;
         }
 
@@ -170,15 +154,7 @@ public class AutoTNTplus extends Module {
 
                     boolean is2Tall = mc.world.getBlockState(base).isOf(Blocks.OBSIDIAN)
                         && mc.world.getBlockState(base.up()).isOf(Blocks.OBSIDIAN);
-                    if (is2Tall) {
-                        placedDirection = dir;
-                        basePos = base;
-                        currentPillarHeight = 2;
-                        tntPos = targetPos.up(currentPillarHeight);
-                        break;
-                    }
-
-                    if (!mc.world.getBlockState(surround).isAir()) {
+                    if (is2Tall || !mc.world.getBlockState(surround).isAir()) {
                         placedDirection = dir;
                         basePos = base;
                         currentPillarHeight = 2;
@@ -231,7 +207,10 @@ public class AutoTNTplus extends Module {
                         });
 
                         if (!item.found()) {
-                            warning("No igniter found!");
+                            if (igniterCooldown == 0) {
+                                warning("No igniter found!");
+                                igniterCooldown = 40;
+                            }
                             return;
                         }
 

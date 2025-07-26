@@ -73,6 +73,7 @@ public class AntiConcrete extends Module {
     private int returnTimer = -1;
     private int originalSlot = -1;
     private boolean waitingToReturn = false;
+    private int noButtonCooldown = 0;
 
     public AntiConcrete() {
         super(Xenon.XENON_CATEGORY, "anti-concrete", "Places a button under yourself when enemies are nearby or dropping blocks.");
@@ -87,6 +88,8 @@ public class AntiConcrete extends Module {
                 waitingToReturn = false;
             }
         }
+
+        if (noButtonCooldown > 0) noButtonCooldown--;
 
         if (TargetUtils.getPlayerTarget(range.get(), SortPriority.LowestDistance) != null) {
             if (mode.get() == Mode.Smart) {
@@ -120,7 +123,10 @@ public class AntiConcrete extends Module {
         }
 
         if (!button.found()) {
-            warning("No button in hotbar or inventory.");
+            if (noButtonCooldown == 0) {
+                warning("No button in hotbar or inventory.");
+                noButtonCooldown = 40; // 2 seconds
+            }
             return;
         }
 
