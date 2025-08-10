@@ -63,8 +63,12 @@ public class AutoPearlTeleportInput extends Module {
 
         int current = countTotems();
 
+        // Force send: use the THRESHOLD value so Output will always trigger
         if (forceTeleport.get()) {
-            ChatUtils.sendPlayerMsg("/msg " + altName.get() + " " + current + " totem remaining");
+            String alt = altName.get().trim();
+            if (!alt.isEmpty()) {
+                ChatUtils.sendPlayerMsg("/msg " + alt + " " + totemThreshold.get() + " totem remaining");
+            }
             shouldResetForceTeleport = true;
         }
 
@@ -73,8 +77,12 @@ public class AutoPearlTeleportInput extends Module {
             shouldResetForceTeleport = false;
         }
 
+        // Normal auto-send when dropping to or below threshold
         if (current != lastCount && current <= totemThreshold.get()) {
-            ChatUtils.sendPlayerMsg("/msg " + altName.get() + " " + current + " totem remaining");
+            String alt = altName.get().trim();
+            if (!alt.isEmpty()) {
+                ChatUtils.sendPlayerMsg("/msg " + alt + " " + current + " totem remaining");
+            }
         }
 
         lastCount = current;
