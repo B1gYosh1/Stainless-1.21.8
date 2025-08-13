@@ -17,17 +17,17 @@ import net.minecraft.block.Blocks;
 import net.minecraft.entity.EquipmentSlot;
 import net.minecraft.entity.player.PlayerEntity;
 import net.minecraft.item.Items;
-import net.minecraft.item.ItemStack;
 import net.minecraft.util.Hand;
 import net.minecraft.util.math.BlockPos;
 import net.minecraft.util.math.Direction;
 
 import com.autoconcrete.addon.Xenon;
 
-public class AutoCityPlus extends Module {
+public class AutoMinePlus extends Module {
     private final SettingGroup sgGeneral = settings.getDefaultGroup();
     private final SettingGroup sgRender = settings.createGroup("Render");
 
+    // Targeting & ranges
     private final Setting<Double> targetRange = sgGeneral.add(new DoubleSetting.Builder()
         .name("target-range")
         .description("Range to target players.")
@@ -46,22 +46,31 @@ public class AutoCityPlus extends Module {
         .build()
     );
 
+    // Bedrock options
     private final Setting<Boolean> mineBedrock = sgGeneral.add(new BoolSetting.Builder()
         .name("mine-bedrock")
-        .description("Allows mining bedrock blocks.")
+        .description("Allows mining bedrock blocks around the target.")
         .defaultValue(false)
         .build()
     );
 
-    // NEW: Prioritize bedrock the player is standing in (visible only when mining bedrock)
     private final Setting<Boolean> prioritizePlayerBedrock = sgGeneral.add(new BoolSetting.Builder()
-        .name("prioritize-player-bedrock")
+        .name("prioritize-target-standing-bedrock")
         .description("Prioritize mining the bedrock the target is standing in over surrounding blocks.")
         .defaultValue(true)
         .visible(mineBedrock::get)
         .build()
     );
 
+    // NEW: Clear your own upper hitbox bedrock (independent of mineBedrock)
+    private final Setting<Boolean> clearUpperBedrock = sgGeneral.add(new BoolSetting.Builder()
+        .name("clear-upper-bedrock")
+        .description("If phased, automatically mine the bedrock at your upper hitbox to free AutoMine/AutoCrystal.")
+        .defaultValue(true)
+        .build()
+    );
+
+    // Filters
     private final Setting<Boolean> ignoreFriends = sgGeneral.add(new BoolSetting.Builder()
         .name("ignore-friends")
         .description("Don't target players on your friends list.")
@@ -76,6 +85,7 @@ public class AutoCityPlus extends Module {
         .build()
     );
 
+    // Placement/support
     private final Setting<Boolean> support = sgGeneral.add(new BoolSetting.Builder()
         .name("support")
         .description("Places support block under break target if missing.")
@@ -93,6 +103,7 @@ public class AutoCityPlus extends Module {
         .build()
     );
 
+    // QoL
     private final Setting<Boolean> rotate = sgGeneral.add(new BoolSetting.Builder()
         .name("rotate")
         .description("Rotate to block before mining.")
@@ -116,6 +127,7 @@ public class AutoCityPlus extends Module {
         .build()
     );
 
+    // Render
     private final Setting<Boolean> swingHand = sgRender.add(new BoolSetting.Builder()
         .name("swing-hand")
         .description("Whether to swing your hand when mining.")
@@ -155,8 +167,8 @@ public class AutoCityPlus extends Module {
     private BlockPos targetPos;
     private int chatCooldown = 0;
 
-    public AutoCityPlus() {
-        super(Xenon.XENON_CATEGORY, "auto-city-plus", "Automatically mine blocks next to someone's feet.");
+    public AutoMinePlus() {
+        super(Xenon.XENON_CATEGORY, "AutoMinePlus", "Expanded Automine with bedrock utilities.");
     }
 
     @Override
@@ -166,7 +178,8 @@ public class AutoCityPlus extends Module {
         chatCooldown = 0;
     }
 
-    // NEW: Safety check to avoid rotation/mining when you’re floating with a block above head
+    // Safety: avoid weird rotates when floating with a block above head.
+    // We will override this guard if we are explicitly clearing our own upper-bedrock.
     private boolean shouldAllowRotation() {
         BlockPos playerPos = mc.player.getBlockPos();
         Block blockAtFeet = mc.world.getBlockState(playerPos).getBlock();
@@ -181,6 +194,38 @@ public class AutoCityPlus extends Module {
     private void onTick(TickEvent.Post event) {
         if (chatCooldown > 0) chatCooldown--;
 
+        // 1) NEW: Clear your own upper hitbox bedrock first (independent of targeting others)
+        if (clearUpperBedrock.get()) {
+            BlockPos headPos = mc.player.getBlockPos().up(1);
+            Block headBlock = mc.world.getBlockState(headPos).getBlock();
+
+            if (headBlock == Blocks.BEDROCK) {
+                targetPos = headPos;
+
+                // Optional support (rarely needed for your head block, but harmless)
+                if (support.get() && mc.world.getBlockState(targetPos.down()).isAir()) {
+                    BlockUtils.place(targetPos.down(), InvUtils.findInHotbar(Items.OBSIDIAN), rotate.get(), 0, true);
+                }
+
+                // Override anti-scuff: we DO want to rotate/mine this
+                if (rotate.get()) {
+                    Rotations.rotate(Rotations.getYaw(targetPos), Rotations.getPitch(targetPos));
+                }
+
+                mc.interactionManager.updateBlockBreakingProgress(targetPos, Direction.UP);
+                if (swingHand.get()) mc.player.swingHand(Hand.MAIN_HAND);
+
+                if (chatInfo.get() && chatCooldown <= 0) {
+                    info("Clearing upper-hitbox bedrock.");
+                    chatCooldown = chatDelay.get();
+                }
+
+                // Render handled below; exit early because this has priority.
+                return;
+            }
+        }
+
+        // 2) Acquire/refresh target
         target = null;
         double closestDistance = targetRange.get() * targetRange.get();
 
@@ -196,9 +241,12 @@ public class AutoCityPlus extends Module {
             }
         }
 
-        if (target == null) return;
+        if (target == null) {
+            targetPos = null;
+            return;
+        }
 
-        // Prefer bedrock in the target's lower hitbox if enabled and in range
+        // 3) Prefer bedrock in the target's lower hitbox if enabled and in range
         boolean handledStandingBedrock = false;
         if (mineBedrock.get() && prioritizePlayerBedrock.get()) {
             BlockPos lowerHitboxPos = target.getBlockPos();
@@ -211,13 +259,13 @@ public class AutoCityPlus extends Module {
                 handledStandingBedrock = true;
 
                 if (chatInfo.get() && chatCooldown <= 0) {
-                    info("Breaking bedrock in lower hitbox.");
+                    info("Breaking bedrock in target's lower hitbox.");
                     chatCooldown = chatDelay.get();
                 }
             }
         }
 
-        // Otherwise pick a city block around the target
+        // 4) Otherwise pick a city block around the target
         if (!handledStandingBedrock) {
             targetPos = findCityBlock(target);
             if (targetPos == null) return;
@@ -225,11 +273,15 @@ public class AutoCityPlus extends Module {
 
         if (PlayerUtils.squaredDistanceTo(targetPos) > breakRange.get() * breakRange.get()) return;
 
-        if (support.get() && mc.world.getBlockState(targetPos.down()).isAir()) {
+        // Support placement if needed
+        if (support.get() && mc.world.getBlockState(targetPos.down()).isAir()
+            && PlayerUtils.squaredDistanceTo(targetPos.down()) <= placeRange.get() * placeRange.get()) {
             BlockUtils.place(targetPos.down(), InvUtils.findInHotbar(Items.OBSIDIAN), rotate.get(), 0, true);
         }
 
         boolean allowActions = shouldAllowRotation();
+        // If our chosen targetPos happens to be our own head (unlikely here), allow anyway:
+        if (targetPos.equals(mc.player.getBlockPos().up(1))) allowActions = true;
 
         if (rotate.get() && allowActions) {
             Rotations.rotate(Rotations.getYaw(targetPos), Rotations.getPitch(targetPos));
@@ -249,8 +301,11 @@ public class AutoCityPlus extends Module {
 
             if (PlayerUtils.squaredDistanceTo(offset) > breakRange.get() * breakRange.get()) continue;
 
-            if (mineBedrock.get() && block == Blocks.BEDROCK) return offset;
-            else if (!mineBedrock.get() && block != Blocks.AIR && block != Blocks.BEDROCK) return offset;
+            if (mineBedrock.get() && block == Blocks.BEDROCK) {
+                return offset;
+            } else if (!mineBedrock.get() && block != Blocks.AIR && block != Blocks.BEDROCK) {
+                return offset;
+            }
         }
         return null;
     }
