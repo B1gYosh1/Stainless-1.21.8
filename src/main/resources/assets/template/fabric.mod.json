@@ -3,7 +3,7 @@
   "id": "auto-concrete-addon",
   "version": "${version}",
   "name": "Xenon's Addon",
-  "description": "Builds a 2-block obsidian pillar and drops concrete on enemies.",
+  "description": "Pvp addon <3.",
   "authors": [
     "Xenon_ne"
   ],
@@ -17,6 +17,9 @@
       "com.autoconcrete.addon.Xenon"
     ]
   },
+  "mixins": [
+    "mixins.autoconcrete.json"
+  ],
   "custom": {
     "meteor-client:color": "255,182,193"
   },
