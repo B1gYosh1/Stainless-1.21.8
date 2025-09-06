@@ -23,6 +23,7 @@ public class Xenon extends MeteorAddon {
         Modules.get().add(new com.autoconcrete.addon.modules.AntiFeetplace());
         Modules.get().add(new com.autoconcrete.addon.modules.BetterScaffold());
         Modules.get().add(new com.autoconcrete.addon.modules.AutoPearlStasis());
+        Modules.get().add(new com.autoconcrete.addon.modules.EntityAnimations());
     }
 
     @Override
