@@ -17,7 +17,7 @@
 - When target uses feetplace/surround the echest interrupts them by making them spam open it, allowing you to use autocrystal for full damage.
 - Can also potentially cause the target to get packet rate kicked.
 
-#### BetterScaffold
+#### BetterScaffold *(Credits: TrouserStreak addon)*
 - New scaffold module with improved placement logic, extra settings, and render options.
 
 #### AutoPearlStasis
