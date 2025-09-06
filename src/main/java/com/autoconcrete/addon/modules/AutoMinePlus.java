@@ -66,7 +66,7 @@ public class AutoMinePlus extends Module {
         .build()
     );
 
-    // NEW: Clear your own upper hitbox bedrock (independent of mineBedrock)
+    // Clear your own upper hitbox bedrock (independent of mineBedrock)
     private final Setting<Boolean> clearUpperBedrock = sgGeneral.add(new BoolSetting.Builder()
         .name("clear-upper-bedrock")
         .description("If phased, automatically mine the bedrock at your upper hitbox to free AutoMine/AutoCrystal.")
@@ -115,7 +115,6 @@ public class AutoMinePlus extends Module {
         .build()
     );
 
-    // NEW: Pause while eating
     private final Setting<Boolean> pauseWhileEating = sgGeneral.add(new BoolSetting.Builder()
         .name("pause-while-eating")
         .description("Temporarily pauses AutoMinePlus while you're eating food.")
@@ -132,8 +131,8 @@ public class AutoMinePlus extends Module {
 
     private final Setting<Integer> chatDelay = sgGeneral.add(new IntSetting.Builder()
         .name("chat-delay")
-        .description("Delay between chat messages in ticks.")
-        .defaultValue(40)
+        .description("Minimum ticks between messages (2s min enforced).")
+        .defaultValue(40) // 2 seconds @ 20 tps
         .min(0)
         .sliderMax(200)
         .build()
@@ -177,9 +176,10 @@ public class AutoMinePlus extends Module {
 
     private PlayerEntity target;
     private BlockPos targetPos;
-    private int chatCooldown = 0;
 
-    // Track eating state for clean one-time messages
+    // Chat throttle state (hard min 2s)
+    private int chatCooldown = 0;
+    private String pendingChat = null;
     private boolean wasEating = false;
 
     public AutoMinePlus() {
@@ -191,8 +191,23 @@ public class AutoMinePlus extends Module {
         target = null;
         targetPos = null;
         chatCooldown = 0;
+        pendingChat = null;
         wasEating = false;
     }
+
+    // ---- CHAT THROTTLE (2s min) ----
+    private void chat(String msg) {
+        if (!chatInfo.get()) return;
+        int cooldownTicks = Math.max(40, chatDelay.get()); // enforce >= 2s
+        if (chatCooldown <= 0) {
+            info(msg);
+            chatCooldown = cooldownTicks;
+        } else {
+            // keep only the latest message during cooldown
+            pendingChat = msg;
+        }
+    }
+    // --------------------------------
 
     // Safety: avoid weird rotates when floating with a block above head.
     // We will override this guard if we are explicitly clearing our own upper-bedrock.
@@ -200,39 +215,40 @@ public class AutoMinePlus extends Module {
         BlockPos playerPos = mc.player.getBlockPos();
         Block blockAtFeet = mc.world.getBlockState(playerPos).getBlock();
         Block blockAboveHead = mc.world.getBlockState(playerPos.up(1)).getBlock();
-
-        // If standing in air AND there’s a block above head, skip rotate/mine (prevents scuffed rotation)
         if (blockAtFeet == Blocks.AIR && blockAboveHead != Blocks.AIR) return false;
         return true;
     }
 
     @EventHandler
     private void onTick(TickEvent.Post event) {
-        if (chatCooldown > 0) chatCooldown--;
+        // tick chat cooldown and flush pending when ready
+        if (chatCooldown > 0) {
+            chatCooldown--;
+            if (chatCooldown == 0 && pendingChat != null) {
+                int cooldownTicks = Math.max(40, chatDelay.get());
+                info(pendingChat);
+                pendingChat = null;
+                chatCooldown = cooldownTicks;
+            }
+        }
 
         // --- Pause-while-eating early-out ---
         if (pauseWhileEating.get() && mc.player != null) {
             boolean eatingNow = mc.player.isUsingItem() && isFood(mc.player.getActiveItem());
             if (eatingNow) {
                 if (!wasEating) {
-                    if (chatInfo.get() && chatCooldown <= 0) {
-                        info("Paused: eating.");
-                        chatCooldown = chatDelay.get();
-                    }
+                    chat("Paused: eating.");
                     wasEating = true;
                 }
-                return; // do nothing while eating
+                return;
             } else if (wasEating) {
-                if (chatInfo.get() && chatCooldown <= 0) {
-                    info("Resuming after eating.");
-                    chatCooldown = chatDelay.get();
-                }
+                chat("Resuming after eating.");
                 wasEating = false;
             }
         }
         // ------------------------------------
 
-        // 1) NEW: Clear your own upper hitbox bedrock first (independent of targeting others)
+        // 1) Clear your own upper hitbox bedrock first
         if (clearUpperBedrock.get()) {
             BlockPos headPos = mc.player.getBlockPos().up(1);
             Block headBlock = mc.world.getBlockState(headPos).getBlock();
@@ -240,12 +256,10 @@ public class AutoMinePlus extends Module {
             if (headBlock == Blocks.BEDROCK) {
                 targetPos = headPos;
 
-                // Optional support (rarely needed for your head block, but harmless)
                 if (support.get() && mc.world.getBlockState(targetPos.down()).isAir()) {
                     BlockUtils.place(targetPos.down(), InvUtils.findInHotbar(Items.OBSIDIAN), rotate.get(), 0, true);
                 }
 
-                // Override anti-scuff: we DO want to rotate/mine this
                 if (rotate.get()) {
                     Rotations.rotate(Rotations.getYaw(targetPos), Rotations.getPitch(targetPos));
                 }
@@ -253,12 +267,7 @@ public class AutoMinePlus extends Module {
                 mc.interactionManager.updateBlockBreakingProgress(targetPos, Direction.UP);
                 if (swingHand.get()) mc.player.swingHand(Hand.MAIN_HAND);
 
-                if (chatInfo.get() && chatCooldown <= 0) {
-                    info("Clearing upper-hitbox bedrock.");
-                    chatCooldown = chatDelay.get();
-                }
-
-                // Render handled below; exit early because this has priority.
+                chat("Clearing upper-hitbox bedrock.");
                 return;
             }
         }
@@ -295,18 +304,18 @@ public class AutoMinePlus extends Module {
 
                 targetPos = lowerHitboxPos;
                 handledStandingBedrock = true;
-
-                if (chatInfo.get() && chatCooldown <= 0) {
-                    info("Breaking bedrock in target's lower hitbox.");
-                    chatCooldown = chatDelay.get();
-                }
+                chat("Breaking bedrock in target's lower hitbox.");
             }
         }
 
-        // 4) Otherwise pick a city block around the target
+        // 4) Otherwise pick a city block around the target (bedrock first, then any solid)
         if (!handledStandingBedrock) {
             targetPos = findCityBlock(target);
             if (targetPos == null) return;
+
+            Block blk = mc.world.getBlockState(targetPos).getBlock();
+            if (blk == Blocks.BEDROCK) chat("Breaking surrounding bedrock.");
+            else chat("Breaking surrounding block: " + blk.getName().getString());
         }
 
         if (PlayerUtils.squaredDistanceTo(targetPos) > breakRange.get() * breakRange.get()) return;
@@ -318,7 +327,6 @@ public class AutoMinePlus extends Module {
         }
 
         boolean allowActions = shouldAllowRotation();
-        // If our chosen targetPos happens to be our own head (unlikely here), allow anyway:
         if (targetPos.equals(mc.player.getBlockPos().up(1))) allowActions = true;
 
         if (rotate.get() && allowActions) {
@@ -331,20 +339,38 @@ public class AutoMinePlus extends Module {
         }
     }
 
+    /**
+     * Returns a block next to the target to "city":
+     * - If mineBedrock is ON: first look for bedrock (priority).
+     * - If none found (or setting OFF): look for any other solid block (non-air, non-liquid).
+     */
     private BlockPos findCityBlock(PlayerEntity target) {
         BlockPos pos = target.getBlockPos();
-        for (Direction dir : Direction.Type.HORIZONTAL) {
-            BlockPos offset = pos.offset(dir);
-            Block block = mc.world.getBlockState(offset).getBlock();
 
-            if (PlayerUtils.squaredDistanceTo(offset) > breakRange.get() * breakRange.get()) continue;
+        // Pass 1: bedrock (priority when enabled)
+        if (mineBedrock.get()) {
+            for (Direction dir : Direction.Type.HORIZONTAL) {
+                BlockPos offset = pos.offset(dir);
+                if (PlayerUtils.squaredDistanceTo(offset) > breakRange.get() * breakRange.get()) continue;
 
-            if (mineBedrock.get() && block == Blocks.BEDROCK) {
-                return offset;
-            } else if (!mineBedrock.get() && block != Blocks.AIR && block != Blocks.BEDROCK) {
-                return offset;
+                Block block = mc.world.getBlockState(offset).getBlock();
+                if (block == Blocks.BEDROCK) return offset;
             }
         }
+
+        // Pass 2: any other solid block (non-air, non-liquid)
+        for (Direction dir : Direction.Type.HORIZONTAL) {
+            BlockPos offset = pos.offset(dir);
+            if (PlayerUtils.squaredDistanceTo(offset) > breakRange.get() * breakRange.get()) continue;
+
+            if (!mc.world.getFluidState(offset).isEmpty()) continue;
+            Block block = mc.world.getBlockState(offset).getBlock();
+            if (block == Blocks.AIR) continue;
+            if (block == Blocks.BEDROCK) continue;
+
+            return offset;
+        }
+
         return null;
     }
 
