@@ -412,5 +412,37 @@ Automatically places blocks under (or above) you for safe bridging/towering. Hot
 
 ---
 
+### EntityAnimations
+Crystal & player animation/scale controls. Lets you tweak crystal rendering, disable parts, and adjust player model scaling.
+
+- **Crystals**
+    - Enable/disable all overrides.
+    - Adjust **scale** of the whole crystal.
+    - Control **float factor** (bob amplitude multiplier).
+    - Adjust **rotation speed** multiplier (yaw).
+- **Crystal Parts**
+    - Toggle rendering of **inner glass**, **outer glass**, **core cube**, and **bottom base**.
+- **Players**
+    - Enable/disable player overrides.
+    - Adjust **scale** of player models.
+
+**Settings (Crystals)**
+- `enabled` — Toggle crystal overrides.
+- `crystal-scale` — Scale applied to whole crystal (0.1–8.0).
+- `float-factor` — Bob amplitude multiplier (0 = vanilla).
+- `rotation-speed` — Yaw rotation speed multiplier (0 = vanilla).
+
+**Settings (Crystal Parts)**
+- `inner` — Render inner glass layer.
+- `outer` — Render outer glass layer.
+- `core` — Render cube core.
+- `bottom` — Render bedrock/obsidian base.
+
+**Settings (Players)**
+- `enabled` — Toggle player overrides.
+- `player-scale` — Scale applied to player models (0.1–8.0).
+
+---
+
 ## License
 This project is licensed under the CC0-1.0 license.

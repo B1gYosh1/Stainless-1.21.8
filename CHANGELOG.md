@@ -6,29 +6,33 @@
 
 ### Fixed
 
-### AutoWebFeetPlace
+#### AutoWebFeetPlace
 - Fixed pearl sometimes not throwing even when valid angles are open.
 - Added a "pause while eating" toggle.
 
 ### Added
 
-### AntiFeetPlace
+#### AntiFeetPlace
 - Mines under the target’s surround and places an ender chest.
 - When target uses feetplace/surround the echest interrupts them by making them spam open it, allowing you to use autocrystal for full damage.
 - Can also potentially cause the target to get packet rate kicked.
 
-### BetterScaffold
-- New scaffold module with improved placement logic.
+#### BetterScaffold
+- New scaffold module with improved placement logic, extra settings, and render options.
 
-### AutoPearlStasis
-- Combines the old Input and Output modules into one.
-- Includes keybind option for the `Force Teleport` toggle.
+#### AutoPearlStasis
+- Combines the old Input and Output modules into one unified module.
+- Includes a keybind option for the `Force Teleport` toggle.
 - Added player name detection option to auto-trigger `Force Teleport` when a specified player is in visual range.
 
+#### EntityAnimations
+- New rendering/animation tweaks for crystals and players.
+- Adjustable crystal scale, float/bob factor, and rotation speed.
+- Toggle individual crystal parts (inner, outer, core, bottom).
+- Player model scaling with custom multiplier.
+
 ### Changed
-- Deleted `AutoPearlTeleport (Input)` & `AutoPearlTeleport (Output)` — now merged into `AutoPearlStasis`.
-- Added keybind option for `Force Teleport`.
-- Added player name detection to trigger `Force Teleport` when in visual range.
+- Deleted `AutoPearlTeleport (Input)` & `AutoPearlTeleport (Output)` — replaced by `AutoPearlStasis`.
 
 ---
 
