@@ -1,7 +1,7 @@
-package com.autoconcrete.addon.mixin;
+package com.autoconcrete.addon.mixin.mixinhelper;
 
+import net.minecraft.entity.LimbAnimator;
 import net.minecraft.entity.LivingEntity;
-import net.minecraft.entity.LimbAnimator; // 1.21.x location
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.gen.Accessor;
 

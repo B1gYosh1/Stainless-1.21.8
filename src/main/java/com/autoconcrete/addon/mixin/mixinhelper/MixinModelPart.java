@@ -1,4 +1,4 @@
-package com.autoconcrete.addon.mixin;
+package com.autoconcrete.addon.mixin.mixinhelper;
 
 import com.autoconcrete.addon.mixinhelper.CrystalPartGate;
 import net.minecraft.client.model.ModelPart;
