@@ -1,5 +1,5 @@
 // src/main/java/com/autoconcrete/addon/mixin/MixinLivingEntityRenderer.java
-package com.autoconcrete.addon.mixin.mixinhelper;
+package com.autoconcrete.addon.mixin;
 
 import com.autoconcrete.addon.modules.EntityAnimations;
 import net.minecraft.client.render.VertexConsumerProvider;

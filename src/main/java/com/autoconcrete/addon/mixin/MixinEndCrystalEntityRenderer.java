@@ -1,4 +1,4 @@
-package com.autoconcrete.addon.mixin.mixinhelper;
+package com.autoconcrete.addon.mixin;
 
 import com.autoconcrete.addon.mixinhelper.CrystalPartGate;
 import com.autoconcrete.addon.modules.EntityAnimations;
