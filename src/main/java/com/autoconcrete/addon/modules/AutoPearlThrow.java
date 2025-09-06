@@ -8,7 +8,6 @@ import meteordevelopment.meteorclient.systems.modules.Module;
 import meteordevelopment.meteorclient.utils.player.FindItemResult;
 import meteordevelopment.meteorclient.utils.player.InvUtils;
 import meteordevelopment.meteorclient.utils.player.Rotations;
-import meteordevelopment.meteorclient.utils.misc.Keybind;
 import meteordevelopment.orbit.EventHandler;
 import net.minecraft.entity.player.PlayerEntity;
 import net.minecraft.item.Items;
@@ -59,7 +58,7 @@ public class AutoPearlThrow extends Module {
         .name("jump-wait-ms").description("Wait this long after jumping before aiming/throwing.")
         .defaultValue(180).min(50).max(400).visible(jumpOnThrow::get).build());
 
-    // --- Reserve Totems (skip throws when low)
+    // Reserve Totems
     private final Setting<Boolean> reserveTotems = sgGeneral.add(new BoolSetting.Builder()
         .name("reserve-totems")
         .description("Skip scheduling/throwing when total totems are at or below the set amount.")
@@ -81,8 +80,9 @@ public class AutoPearlThrow extends Module {
         .defaultValue(true).build());
 
     private final Setting<Boolean> avoidEnemyCone = sgAiming.add(new BoolSetting.Builder()
-        .name("avoid-enemy-cone").description("Don’t throw toward the nearest enemy; skip a cone in their direction.")
-        .defaultValue(true).visible(aimFullCircle::get).build());
+        .name("avoid-enemy-cone").description("Skip a cone toward the nearest enemy.")
+        // Recommended preset uses OFF by default for reliability.
+        .defaultValue(false).visible(aimFullCircle::get).build());
 
     private final Setting<Double> enemyConeDegrees = sgAiming.add(new DoubleSetting.Builder()
         .name("enemy-cone-deg").description("Width of the forbidden cone toward the nearest enemy.")
@@ -91,16 +91,16 @@ public class AutoPearlThrow extends Module {
 
     private final Setting<Double> minBackDist = sgAiming.add(new DoubleSetting.Builder()
         .name("min-escape-distance").description("Minimum landing distance (blocks) from your position.")
-        .defaultValue(12.0).min(5.0).max(60.0).sliderMin(8.0).sliderMax(40.0).build());
+        .defaultValue(6.0).min(3.0).max(60.0).sliderMin(4.0).sliderMax(40.0).build());
 
     private final Setting<Double> maxBackDist = sgAiming.add(new DoubleSetting.Builder()
         .name("max-escape-distance").description("Maximum landing distance (blocks) from your position.")
-        .defaultValue(26.0).min(10.0).max(70.0).sliderMin(15.0).sliderMax(50.0).build());
+        .defaultValue(22.0).min(8.0).max(70.0).sliderMin(12.0).sliderMax(50.0).build());
 
     // ----- Safety -----
     private final Setting<Double> clearCheckDistance = sgSafety.add(new DoubleSetting.Builder()
         .name("clear-check-distance").description("Distance along aim direction to check for blocking walls.")
-        .defaultValue(4.5).min(1.0).max(10.0).sliderMin(2.0).sliderMax(6.0).build());
+        .defaultValue(3.0).min(1.0).max(10.0).sliderMin(2.0).sliderMax(6.0).build());
 
     private final Setting<Boolean> trySideOffsets = sgSafety.add(new BoolSetting.Builder()
         .name("try-side-offsets").description("If legacy fallback is used, try yaw offsets (±20°).")
@@ -116,23 +116,22 @@ public class AutoPearlThrow extends Module {
 
     private final Setting<Double> nearPathCheck = sgSafety.add(new DoubleSetting.Builder()
         .name("near-path-check").description("Checks the first N blocks of the pearl’s path for collisions.")
-        .defaultValue(5.5).min(1.0).max(8.0).sliderMin(2.0).sliderMax(6.0).build());
+        .defaultValue(3.0).min(1.0).max(8.0).sliderMin(2.0).sliderMax(6.0).build());
 
     private final Setting<Double> initialClearance = sgSafety.add(new DoubleSetting.Builder()
         .name("initial-clearance")
         .description("Minimum clear distance from your eyes along the aim ray. Helps when touching a wall.")
-        .defaultValue(1.15).min(0.2).max(1.5).sliderMin(0.5).sliderMax(1.2).build());
+        .defaultValue(0.8).min(0.2).max(1.5).sliderMin(0.5).sliderMax(1.2).build());
 
-    // NEW: corridor/slit avoidance
     private final Setting<Double> corridorCheckDist = sgSafety.add(new DoubleSetting.Builder()
         .name("corridor-check-distance")
         .description("How far ahead to verify the corridor’s width (blocks).")
-        .defaultValue(2.75).min(1.0).max(6.0).sliderMin(2.0).sliderMax(5.0).build());
+        .defaultValue(2.0).min(1.0).max(6.0).sliderMin(1.0).sliderMax(5.0).build());
 
     private final Setting<Double> corridorHalfWidth = sgSafety.add(new DoubleSetting.Builder()
         .name("corridor-half-width")
         .description("Half width that must be clear on both sides of the throw ray (blocks). 0.5 ≈ one full block.")
-        .defaultValue(0.55).min(0.25).max(1.0).sliderMin(0.4).sliderMax(0.8).build());
+        .defaultValue(0.30).min(0.25).max(1.0).sliderMin(0.25).sliderMax(0.8).build());
 
     private final Setting<Double> enemyCorridorBoost = sgSafety.add(new DoubleSetting.Builder()
         .name("enemy-corridor-boost")
@@ -146,11 +145,10 @@ public class AutoPearlThrow extends Module {
         .defaultValue(12.0).min(0.0).max(30.0).sliderMin(6.0).sliderMax(24.0)
         .visible(() -> aimFullCircle.get() && avoidEnemyCone.get()).build());
 
-    // NEW: enclosure / “no real escape” guard
     private final Setting<Boolean> cancelIfNoEscape = sgSafety.add(new BoolSetting.Builder()
         .name("cancel-if-no-escape")
         .description("Skip throwing entirely if no direction can reach the minimum escape distance.")
-        .defaultValue(true).build());
+        .defaultValue(false).build()); // preset = OFF
 
     private final Setting<Double> probeStepDegrees = sgSafety.add(new DoubleSetting.Builder()
         .name("probe-step-deg")
@@ -163,6 +161,17 @@ public class AutoPearlThrow extends Module {
         .description("How many flat-ish pitches to probe per yaw.")
         .defaultValue(3).min(1).max(6)
         .visible(cancelIfNoEscape::get).build());
+
+    // NEW: start bias & ray step
+    private final Setting<Double> startBias = sgSafety.add(new DoubleSetting.Builder()
+        .name("start-bias")
+        .description("How far forward (blocks) to bias the ray start from your eyes. Helps throw through tight side gaps.")
+        .defaultValue(0.25).min(0.0).max(0.6).sliderMin(0.0).sliderMax(0.4).build());
+
+    private final Setting<Double> rayStep = sgSafety.add(new DoubleSetting.Builder()
+        .name("ray-step")
+        .description("Step (blocks) for the early-collision simulator. Larger = fewer checks.")
+        .defaultValue(0.6).min(0.3).max(0.9).sliderMin(0.4).sliderMax(0.8).build());
 
     // ----- Inventory -----
     private final Setting<Boolean> pullFromInventory = sgInv.add(new BoolSetting.Builder()
@@ -181,9 +190,11 @@ public class AutoPearlThrow extends Module {
     private final Setting<Boolean> debug = sgDebug.add(new BoolSetting.Builder()
         .name("debug").description("Log detection and throw steps.").defaultValue(false).build());
 
-    private final Setting<Keybind> testKey = sgDebug.add(new KeybindSetting.Builder()
-        .name("manual-test-key").description("Press to schedule a throw now (for testing).")
-        .defaultValue(Keybind.none()).build());
+    // Replaces Keybind/KeybindSetting
+    private final Setting<Boolean> testNow = sgDebug.add(new BoolSetting.Builder()
+        .name("test-now")
+        .description("Toggle to schedule a throw once (auto-resets).")
+        .defaultValue(false).build());
 
     // ----- State -----
     private boolean pendingThrow = false;
@@ -231,10 +242,11 @@ public class AutoPearlThrow extends Module {
             return;
         }
 
-        // Manual test
-        if (testKey.get().isPressed() && !pendingThrow) {
-            if (debug.get()) info("Manual test key -> scheduling throw.");
+        // Manual test (toggle)
+        if (testNow.get() && !pendingThrow) {
+            if (debug.get()) info("Manual test -> scheduling throw.");
             scheduleThrow(System.currentTimeMillis() + 75);
+            testNow.set(false); // auto-reset
         }
 
         if (!pendingThrow || mc.interactionManager == null) return;
@@ -283,6 +295,8 @@ public class AutoPearlThrow extends Module {
 
         // Aim selection
         Aim aim = pickAimSmart();
+        if (aim == null) aim = pickAimLenient(); // lenient second pass
+
         if (aim == null) {
             if (debug.get()) info("All angles blocked or no escape — cancelled and restored.");
             cleanupAfterCycle(false, didSwap, didMoveFromInv, movedFromSlot, movedToHotbar);
@@ -297,7 +311,7 @@ public class AutoPearlThrow extends Module {
         Runnable doThrow = () -> {
             mc.interactionManager.interactItem(mc.player, fHand);
             if (fDidSwap) InvUtils.swapBack();
-            if (fDidMove) InvUtils.move().fromHotbar(fTo).to(fFrom);
+            if (fDidMove && fTo >= 0 && fFrom >= 0) InvUtils.move().fromHotbar(fTo).to(fFrom);
             lastThrowAt = System.currentTimeMillis();
             cleanupAfterCycle(true, false, false, -1, -1);
             if (debug.get()) info("Pearl thrown.");
@@ -326,10 +340,9 @@ public class AutoPearlThrow extends Module {
         double minD = Math.min(minBackDist.get(), maxBackDist.get());
         double maxD = Math.max(minBackDist.get(), maxBackDist.get());
 
-        // Early enclosure guard: if nothing can reach min distance, abort.
         if (cancelIfNoEscape.get()) {
             double best = bestReachableDistance(minD, maxD);
-            if (best < minD) return null; // no safe escape → cancel throw
+            if (best < minD) return null;
         }
 
         // Build yaw candidates
@@ -356,7 +369,6 @@ public class AutoPearlThrow extends Module {
                 : new float[]{baseYaw};
         }
 
-        // Choose flattest acceptable pitch across candidate yaws (with wiggles)
         Float bestPitch = null, bestYaw = null;
         double bestTime = Double.POSITIVE_INFINITY;
 
@@ -364,7 +376,6 @@ public class AutoPearlThrow extends Module {
             for (float wig : yawWiggles()) {
                 float yaw = wrapYaw(yawBase + wig);
 
-                // Decide pitch (nullable)
                 Float pitch;
                 if (autoBackThrowPitch.get()) {
                     pitch = findFlattestPitchForDistanceRangeWithGuards(
@@ -374,12 +385,11 @@ public class AutoPearlThrow extends Module {
                 }
                 if (pitch == null) continue;
 
-                // Standard guards
                 if (!hasInitialClearance(yaw, pitch, initialClearance.get())) continue;
                 if (!hasClearPath(yaw, pitch, clearCheckDistance.get())) continue;
                 if (hitsWallEarly(yaw, pitch, nearPathCheck.get())) continue;
 
-                // Corridor width guard (wider if near enemy)
+                // Corridor width guard (horizontalized)
                 double halfW = corridorHalfWidth.get();
                 if (aimFullCircle.get() && avoidEnemyCone.get() && haveEnemy) {
                     float delta = angleDelta(yaw, enemyYaw);
@@ -389,7 +399,6 @@ public class AutoPearlThrow extends Module {
                 }
                 if (!hasCorridorWidth(yaw, pitch, corridorCheckDist.get(), halfW)) continue;
 
-                // Pick flattest, then fastest
                 double t = estimateFlightTicks(yaw, pitch, 80);
                 if (bestPitch == null
                     || Math.abs(pitch) < Math.abs(bestPitch)
@@ -401,42 +410,54 @@ public class AutoPearlThrow extends Module {
 
         if (bestPitch != null) return new Aim(bestYaw, bestPitch);
 
-        // Fallback (legacy behind-you escalations)
-        if (!aimFullCircle.get()) {
-            float baseYaw = wrapYaw(mc.player.getYaw() + 180f);
-            float basePitch = (float) -pitchUpDegrees.get();
-            float[] pitchAdds  = escalatePitch.get() ? new float[]{0f, +15f, +30f} : new float[]{0f};
-            float[] yawOffsets = trySideOffsets.get() ? new float[]{0f, +20f, -20f} : new float[]{0f};
-            for (float pAdd : pitchAdds) {
-                float pitch = clampPitch(basePitch - pAdd);
-                for (float yOff : yawOffsets) {
-                    float yaw = wrapYaw(baseYaw + yOff);
-                    if (hasInitialClearance(yaw, pitch, initialClearance.get())
-                        && hasClearPath(yaw, pitch, clearCheckDistance.get())
-                        && !hitsWallEarly(yaw, pitch, nearPathCheck.get())) {
+        // Legacy behind-you fallback (lenient)
+        float baseYaw = wrapYaw(mc.player.getYaw() + 180f);
+        float basePitch = (float) -pitchUpDegrees.get();
+        float[] pitchAdds  = escalatePitch.get() ? new float[]{0f, +15f, +30f} : new float[]{0f};
+        float[] yawOffsets = trySideOffsets.get() ? new float[]{0f, +20f, -20f} : new float[]{0f};
+        for (float pAdd : pitchAdds) {
+            float pitch = clampPitch(basePitch - pAdd);
+            for (float yOff : yawOffsets) {
+                float yaw = wrapYaw(baseYaw + yOff);
+                if (hasInitialClearance(yaw, pitch, Math.max(0.6, initialClearance.get()))
+                    && hasClearPath(yaw, pitch, Math.max(3.0, clearCheckDistance.get() - 1.0))
+                    && !hitsWallEarly(yaw, pitch, Math.max(3.0, nearPathCheck.get() - 1.5))) {
 
-                        double halfW = corridorHalfWidth.get();
-                        if (aimFullCircle.get() && avoidEnemyCone.get() && haveEnemy) {
-                            float delta = angleDelta(yaw, enemyYaw);
-                            float hard = (float)(enemyConeDegrees.get() / 2.0);
-                            float soft = hard + enemyConeSoftPad.get().floatValue();
-                            if (delta <= soft) halfW += enemyCorridorBoost.get();
-                        }
-                        if (!hasCorridorWidth(yaw, pitch, corridorCheckDist.get(), halfW)) continue;
-
+                    if (hasCorridorWidth(yaw, pitch, Math.max(1.5, corridorCheckDist.get() - 1.0),
+                        Math.max(0.45, corridorHalfWidth.get() - 0.1))) {
                         return new Aim(yaw, pitch);
                     }
                 }
             }
         }
 
-        // Tightened straight-up fallback: only if it still meets min distance (when guard enabled)
+        // Straight-up fallback only if we truly can't reach min distance anywhere
         if (fallbackStraightUp.get()) {
-            float fyaw = wrapYaw(mc.player.getYaw() + 180f);
-            float fpitch = -89.0f;
-            double d = simulatePearlRange(fyaw, fpitch, 80);
-            if (!cancelIfNoEscape.get() || d >= Math.min(minBackDist.get(), maxBackDist.get())) {
-                return new Aim(fyaw, fpitch);
+            double best = cancelIfNoEscape.get() ? bestReachableDistance(minD, maxD) : 0.0;
+            if (!cancelIfNoEscape.get() || best < minD * 0.9) {
+                float fyaw = wrapYaw(mc.player.getYaw() + 180f);
+                return new Aim(fyaw, -89.0f);
+            }
+        }
+        return null;
+    }
+
+    // Lenient second pass (shorter checks, ignores corridor width)
+    private Aim pickAimLenient() {
+        double minD = Math.min(minBackDist.get(), maxBackDist.get());
+        double maxD = Math.max(minBackDist.get(), maxBackDist.get());
+
+        java.util.List<Float> yaws = new java.util.ArrayList<>();
+        for (int deg = 0; deg < 360; deg += 20) yaws.add((float)deg - 180f);
+
+        for (float yaw : yaws) {
+            for (float pitch = -4f; pitch >= -80f; pitch -= 2f) {
+                if (!hasInitialClearance(yaw, pitch, Math.max(0.6, initialClearance.get() - 0.3))) continue;
+                double d = simulatePearlRange(yaw, pitch, 80);
+                if (d < minD || d > maxD) continue;
+                if (!hasClearPath(yaw, pitch, Math.max(3.0, clearCheckDistance.get() - 1.0))) continue;
+                if (hitsWallEarly(yaw, pitch, Math.max(3.0, nearPathCheck.get() - 1.5))) continue;
+                return new Aim(yaw, clampPitch(pitch));
             }
         }
         return null;
@@ -455,15 +476,22 @@ public class AutoPearlThrow extends Module {
 
         Vec3d me = mc.player.getPos(), en = nearest.getPos();
         double dx = en.x - me.x, dz = en.z - me.z;
-        float yawRad = (float) Math.atan2(-dx, dz); // MC yaw convention
+        float yawRad = (float) Math.atan2(-dx, dz);
         return (float) Math.toDegrees(yawRad);
     }
 
     private float angleDelta(float a, float b) { return Math.abs(wrapYaw(a - b)); }
 
-    // ---- Clearance checks ----
+    // ---- Clearance helpers (biased start) ----
+    private Vec3d biasedStart(float yawDeg, float pitchDeg, double extra) {
+        Vec3d eye = mc.player.getEyePos();
+        Vec3d dir = directionFromYawPitch(yawDeg, pitchDeg);
+        double bias = Math.max(0.0, startBias.get() + extra);
+        return eye.add(dir.multiply(bias));
+    }
+
     private boolean hasInitialClearance(float yawDeg, float pitchDeg, double dist) {
-        Vec3d start = mc.player.getEyePos();
+        Vec3d start = biasedStart(yawDeg, pitchDeg, 0.0);
         Vec3d dir = directionFromYawPitch(yawDeg, pitchDeg);
         Vec3d end = start.add(dir.multiply(Math.max(0.2, dist)));
         RaycastContext ctx = new RaycastContext(start, end,
@@ -473,7 +501,7 @@ public class AutoPearlThrow extends Module {
     }
 
     private boolean hasClearPath(float yawDeg, float pitchDeg, double distance) {
-        Vec3d start = mc.player.getEyePos();
+        Vec3d start = biasedStart(yawDeg, pitchDeg, 0.0);
         Vec3d dir = directionFromYawPitch(yawDeg, pitchDeg);
         Vec3d end = start.add(dir.multiply(distance));
         RaycastContext ctx = new RaycastContext(start, end,
@@ -484,12 +512,12 @@ public class AutoPearlThrow extends Module {
 
     private boolean hitsWallEarly(float yawDeg, float pitchDeg, double checkBlocks) {
         if (mc.player == null) return false;
-        Vec3d last = mc.player.getEyePos();
+        Vec3d last = biasedStart(yawDeg, pitchDeg, 0.0);
         Vec3d vel = directionFromYawPitch(yawDeg, pitchDeg).multiply(1.5f);
         final double gravity = 0.03, drag = 0.99;
-        double traveled = 0.0;
+        double traveled = 0.0, step = Math.max(0.3, rayStep.get());
         for (int i = 0; i < 28; i++) {
-            Vec3d next = last.add(vel.multiply(0.6));
+            Vec3d next = last.add(vel.multiply(step));
             RaycastContext ctx = new RaycastContext(last, next,
                 RaycastContext.ShapeType.COLLIDER, RaycastContext.FluidHandling.NONE, mc.player);
             HitResult hr = mc.world.raycast(ctx);
@@ -502,21 +530,20 @@ public class AutoPearlThrow extends Module {
         return false;
     }
 
-    /** Corridor/slit guard: checks left/right offsets are clear for `dist` blocks. */
+    /** Corridor/slit guard — HORIZONTAL rays only (no ceiling false positives). */
     private boolean hasCorridorWidth(float yawDeg, float pitchDeg, double dist, double halfWidth) {
         if (mc.player == null) return false;
 
-        Vec3d dir = directionFromYawPitch(yawDeg, pitchDeg);
-        Vec3d fwd = new Vec3d(dir.x, 0, dir.z);
-        if (fwd.lengthSquared() < 1e-6) fwd = new Vec3d(0, 0, 1);
-        fwd = fwd.normalize();
+        // Horizontal forward vector (ignore pitch)
+        float yawRad = (float) Math.toRadians(yawDeg);
+        Vec3d fwd = new Vec3d(-Math.sin(yawRad), 0, Math.cos(yawRad)).normalize();
         Vec3d left = new Vec3d(-fwd.z, 0, fwd.x);
 
         Vec3d eye = mc.player.getEyePos();
         Vec3d startL = eye.add(left.multiply(halfWidth));
         Vec3d startR = eye.add(left.multiply(-halfWidth));
-        Vec3d endL   = startL.add(dir.multiply(dist));
-        Vec3d endR   = startR.add(dir.multiply(dist));
+        Vec3d endL   = startL.add(fwd.multiply(dist));
+        Vec3d endR   = startR.add(fwd.multiply(dist));
 
         RaycastContext ctxL = new RaycastContext(startL, endL,
             RaycastContext.ShapeType.COLLIDER, RaycastContext.FluidHandling.NONE, mc.player);
@@ -569,7 +596,7 @@ public class AutoPearlThrow extends Module {
         return null;
     }
 
-    /** Coarse scan: best horizontal distance we can reach that’s inside the [minD,maxD] window. */
+    /** Coarse scan: best horizontal distance reachable inside [minD,maxD]. */
     private double bestReachableDistance(double minD, double maxD) {
         if (mc.player == null) return 0.0;
 
@@ -589,7 +616,7 @@ public class AutoPearlThrow extends Module {
 
         int pc = Math.max(1, Math.min(6, probePitchCount.get()));
         float[] pitches = new float[pc];
-        for (int i = 0; i < pc; i++) pitches[i] = clampPitch(-2f - i * 6f); // -2, -8, -14, ...
+        for (int i = 0; i < pc; i++) pitches[i] = clampPitch(-2f - i * 6f);
 
         double best = 0.0;
         for (float yaw : yaws) {
@@ -598,15 +625,7 @@ public class AutoPearlThrow extends Module {
                 if (!hasClearPath(yaw, pitch, clearCheckDistance.get())) continue;
                 if (hitsWallEarly(yaw, pitch, nearPathCheck.get())) continue;
 
-                double halfW = corridorHalfWidth.get();
-                if (aimFullCircle.get() && avoidEnemyCone.get() && haveEnemy) {
-                    float delta = angleDelta(yaw, enemyYaw);
-                    float hard = (float)(enemyConeDegrees.get() / 2.0);
-                    float soft = hard + enemyConeSoftPad.get().floatValue();
-                    if (delta <= soft) halfW += enemyCorridorBoost.get();
-                }
-                if (!hasCorridorWidth(yaw, pitch, corridorCheckDist.get(), halfW)) continue;
-
+                // NOTE: corridor width check intentionally omitted in coarse probe.
                 double d = simulatePearlRange(yaw, pitch, 80);
                 if (d >= minD && d <= maxD) best = Math.max(best, d);
             }
