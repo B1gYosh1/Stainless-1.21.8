@@ -1,4 +1,4 @@
-package com.autoconcrete.addon.mixinhelper;
+package xenon.stainless.mixin.mixinhelper;
 
 /** Thread-local gate that decides whether the next ModelPart.render() should draw. */
 public final class CrystalPartGate {

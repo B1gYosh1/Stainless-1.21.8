@@ -1,9 +1,10 @@
-package com.autoconcrete.addon.modules;
+package xenon.addon.stainless.modules;
 
+import xenon.addon.stainless.Stainless;
+import xenon.addon.stainless.StainlessModule;
 import meteordevelopment.meteorclient.events.world.TickEvent;
 import meteordevelopment.meteorclient.settings.*;
 import meteordevelopment.meteorclient.systems.friends.Friends;
-import meteordevelopment.meteorclient.systems.modules.Module;
 import meteordevelopment.meteorclient.utils.player.FindItemResult;
 import meteordevelopment.meteorclient.utils.player.InvUtils;
 import meteordevelopment.meteorclient.utils.player.Rotations;
@@ -25,10 +26,8 @@ import net.minecraft.component.DataComponentTypes;
 import java.util.HashSet;
 import java.util.Set;
 
-// Make sure this static import matches your project:
-import static com.autoconcrete.addon.Xenon.XENON_CATEGORY;
 
-public class AutoWebFeetPlace extends Module {
+public class AutoWebFeetPlace extends StainlessModule {
     public enum PlaceItem { Cobweb, Ladder, Button }
 
     private final SettingGroup sgGeneral = settings.getDefaultGroup();
@@ -134,12 +133,14 @@ public class AutoWebFeetPlace extends Module {
     private int stashedHotbarToMainSlot = -1;
 
     public AutoWebFeetPlace() {
-        super(XENON_CATEGORY, "AutoWebFeetPlace",
-            "Places cobweb, ladder, or any button only when a locked surround block breaks; tag-based button detection.");
+        super(Stainless.STAINLESS_CATEGORY, "AutoWebFeetPlace",
+            "Places cobweb, ladder, or any button after enemies surround/feet-place is broken");
     }
 
     @Override
     public void onActivate() {
+        super.onActivate();
+
         lastAttemptNs = 0;
         clearLock();
         performPreSwapIfNeeded();
@@ -147,6 +148,8 @@ public class AutoWebFeetPlace extends Module {
 
     @Override
     public void onDeactivate() {
+        super.onDeactivate();
+
         if (returnOnDisable.get()) undoPreSwapIfNeeded();
         clearLock();
     }

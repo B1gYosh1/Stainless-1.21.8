@@ -1,9 +1,9 @@
-package com.autoconcrete.addon.modules;
+package xenon.addon.stainless.modules;
 
-import com.autoconcrete.addon.Xenon;
+import xenon.addon.stainless.Stainless;
+import xenon.addon.stainless.StainlessModule;
 import meteordevelopment.meteorclient.events.world.TickEvent;
 import meteordevelopment.meteorclient.settings.*;
-import meteordevelopment.meteorclient.systems.modules.Module;
 import meteordevelopment.meteorclient.utils.player.Rotations;
 import meteordevelopment.orbit.EventHandler;
 import net.minecraft.block.Block;
@@ -13,7 +13,7 @@ import net.minecraft.util.Hand;
 import net.minecraft.util.math.BlockPos;
 import net.minecraft.util.math.Direction;
 
-public class AntiConcreteDetection extends Module {
+public class AntiConcreteDetection extends StainlessModule {
     private final SettingGroup sgGeneral = settings.getDefaultGroup();
 
     private final Setting<BreakMode> breakMode = sgGeneral.add(new EnumSetting.Builder<BreakMode>()
@@ -31,7 +31,7 @@ public class AntiConcreteDetection extends Module {
     );
 
     public AntiConcreteDetection() {
-        super(Xenon.XENON_CATEGORY, "anti-concrete-detection", "Breaks buttons and torches inside enemy hitbox.");
+        super(Stainless.STAINLESS_CATEGORY, "AntiConcreteDetection", "Breaks buttons and torches inside enemy hit-box.");
     }
 
     @EventHandler

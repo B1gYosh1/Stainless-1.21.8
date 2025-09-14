@@ -1,11 +1,11 @@
-package com.autoconcrete.addon.modules;
+package xenon.addon.stainless.modules;
 
-import com.autoconcrete.addon.Xenon;
+import xenon.addon.stainless.Stainless;
+import xenon.addon.stainless.StainlessModule;
 import meteordevelopment.meteorclient.events.game.GameJoinedEvent;
 import meteordevelopment.meteorclient.events.game.ReceiveMessageEvent;
 import meteordevelopment.meteorclient.events.world.TickEvent;
 import meteordevelopment.meteorclient.settings.*;
-import meteordevelopment.meteorclient.systems.modules.Module;
 import meteordevelopment.meteorclient.utils.player.ChatUtils;
 import meteordevelopment.meteorclient.utils.player.FindItemResult;
 import meteordevelopment.meteorclient.utils.player.InvUtils;
@@ -29,7 +29,7 @@ import org.lwjgl.glfw.GLFW;
 import java.lang.reflect.Method;
 import java.util.*;
 
-public class AutoPearlStasis extends Module {
+public class AutoPearlStasis extends StainlessModule {
     // ===== General =====
     private final SettingGroup sgGeneral = settings.getDefaultGroup();
 
@@ -346,12 +346,12 @@ public class AutoPearlStasis extends Module {
     private boolean needCleanup = false;
 
     public AutoPearlStasis() {
-        super(Xenon.XENON_CATEGORY, "AutoPearlStasis",
-            "MAIN: two-alts + proximity trigger; re-arm after teleport (walk to edge, look down, throw, step back). ALT: use armed stasis & reopen.");
+        super(Stainless.STAINLESS_CATEGORY, "AutoPearlStasis", "Instantly Teleports you to your pearl chamber (alt account required).");
     }
 
     @Override
     public void onActivate() {
+        super.onActivate();
         joinCooldown = 60;
         ticksSinceJoin = 0;
         if (mode.get() == Mode.MAIN) {
@@ -499,43 +499,35 @@ public class AutoPearlStasis extends Module {
         if (mc.player != null) lastPos = mc.player.getPos();
     }
 
-    // === NEW: Replaced proximity logic (more permissive + stronger debug) ===
+    // === Stainless-styled proximity logic ===
     private void runProximityTrigger() {
         if (mc == null || mc.player == null || mc.world == null) return;
 
-        // Warmup check
         if (ticksSinceJoin < proxWarmup.get()) {
-            if (debugChat.get()) ChatUtils.info("[APS][PROX] Disarmed: warmup (" + ticksSinceJoin + "/" + proxWarmup.get() + " ticks)");
+            apsProxDebug("Disarmed: warmup (" + ticksSinceJoin + "/" + proxWarmup.get() + " ticks)");
             return;
         }
 
-        // Cooldown check
         if (proxCdTicks > 0) {
-            if (debugChat.get()) ChatUtils.info("[APS][PROX] Cooling down: " + proxCdTicks + " ticks left");
+            apsProxDebug("Cooling down: " + proxCdTicks + " ticks left");
             return;
         }
 
-        // Motion requirement (optional)
         if (proxRequireMotion.get() && proxMotionTicks < 6) {
-            if (debugChat.get()) ChatUtils.info("[APS][PROX] Disarmed: require-motion enabled, proxMotionTicks=" + proxMotionTicks);
+            apsProxDebug("Disarmed: require-motion enabled, proxMotionTicks=" + proxMotionTicks);
             return;
         }
 
-        // Only block if we're already in a teleport window or waiting post-tp
-        if (teleportPending) {
-            if (debugChat.get()) ChatUtils.info("[APS][PROX] Disarmed: teleportPending");
-            return;
-        }
+        if (teleportPending) { apsProxDebug("Disarmed: teleportPending"); return; }
         if (postTeleportDelayTicks >= 0) {
-            if (debugChat.get()) ChatUtils.info("[APS][PROX] Disarmed: postTeleportDelayTicks=" + postTeleportDelayTicks);
+            apsProxDebug("Disarmed: postTeleportDelayTicks=" + postTeleportDelayTicks);
             return;
         }
 
-        // Build watch set
         Set<String> watch = buildWatchSet();
         boolean matchAnyone = proxMatchAnyone.get() && watch.isEmpty();
         if (!matchAnyone && watch.isEmpty()) {
-            if (debugChat.get()) ChatUtils.info("[APS][PROX] No names configured and 'match-anyone-when-empty' is OFF.");
+            apsProxDebug("No names configured and 'match-anyone-when-empty' is OFF.");
             return;
         }
 
@@ -560,13 +552,11 @@ public class AutoPearlStasis extends Module {
 
             candidates++;
 
-            // Per-player one-shot until they leave radius
             if (proxSeen.contains(p.getUuid())) {
-                if (debugChat.get()) ChatUtils.info("[APS][PROX] Seen already in radius: " + name);
+                apsProxDebug("Seen already in radius: " + name);
                 continue;
             }
 
-            // Trigger!
             BlockPos bp = p.getBlockPos();
             String info = "Proximity: " + name + " @ " + bp.getX() + " " + bp.getY() + " " + bp.getZ();
 
@@ -576,22 +566,22 @@ public class AutoPearlStasis extends Module {
                     if (!altName1.get().trim().isEmpty()) {
                         sendMessageTo(altName1.get(), Math.max(1, threshold1.get()));
                         pinged = true;
-                        if (proxChatFeedback.get()) ChatUtils.info(info + " → forced TP via ALT1.");
-                    } else if (proxChatFeedback.get()) ChatUtils.info(info + " → ALT1 not set.");
+                        if (proxChatFeedback.get()) apsInfo(info + " → forced TP via ALT1.");
+                    } else if (proxChatFeedback.get()) apsInfo(info + " → ALT1 not set.");
                 }
                 case ALT2 -> {
                     if (!altName2.get().trim().isEmpty()) {
                         sendMessageTo(altName2.get(), Math.max(1, threshold2.get()));
                         pinged = true;
-                        if (proxChatFeedback.get()) ChatUtils.info(info + " → forced TP via ALT2.");
-                    } else if (proxChatFeedback.get()) ChatUtils.info(info + " → ALT2 not set.");
+                        if (proxChatFeedback.get()) apsInfo(info + " → forced TP via ALT2.");
+                    } else if (proxChatFeedback.get()) apsInfo(info + " → ALT2 not set.");
                 }
                 case BOTH -> {
                     boolean any = false;
                     if (!altName1.get().trim().isEmpty()) { sendMessageTo(altName1.get(), Math.max(1, threshold1.get())); any = true; }
                     if (!altName2.get().trim().isEmpty()) { sendMessageTo(altName2.get(), Math.max(1, threshold2.get())); any = true; }
                     pinged = any;
-                    if (proxChatFeedback.get()) ChatUtils.info(info + (any ? " → forced TP via BOTH." : " → no alts set."));
+                    if (proxChatFeedback.get()) apsInfo(info + (any ? " → forced TP via BOTH." : " → no alts set."));
                 }
             }
 
@@ -600,21 +590,18 @@ public class AutoPearlStasis extends Module {
                 proxSeen.add(p.getUuid());
                 proxCdTicks = Math.max(0, proxCooldown.get());
                 triggered = true;
-                break; // fire once per tick
+                break;
             }
         }
 
-        // Keep proxSeen accurate to current in-range players
         proxSeen.retainAll(currentPlayerUUIDsInRadius(r2));
 
-        if (debugChat.get()) {
-            ChatUtils.info("[APS][PROX] Scan: radius=" + r + ", candidatesInRadius=" + candidates
-                + ", watch=" + (watch.isEmpty() ? (matchAnyone ? "ANYONE" : "EMPTY") : watch)
-                + (triggered ? ", TRIGGERED" : ", no match"));
-        }
+        apsProxDebug("Scan: radius=" + r + ", candidatesInRadius=" + candidates
+            + ", watch=" + (watch.isEmpty() ? (matchAnyone ? "ANYONE" : "EMPTY") : watch)
+            + (triggered ? ", TRIGGERED" : ", no match"));
     }
 
-    // === NEW: name helpers (replace old parseWatchMap) ===
+    // name helpers
     private Set<String> buildWatchSet() {
         Set<String> set = new LinkedHashSet<>();
         List<String> list = proxNameList.get();
@@ -978,7 +965,7 @@ public class AutoPearlStasis extends Module {
                             thrownThisCycle = true;
                             suppressThrowsTicks = 40;
                             needCleanup = true;
-                            if (debugChat.get()) ChatUtils.info("[APS] Pearl thrown.");
+                            apsDebug("Pearl thrown.");
                         }
                     };
 
@@ -1075,40 +1062,36 @@ public class AutoPearlStasis extends Module {
         cleanupInventoryState(); // Ensure clean state before new cycle
         usingOffhand = false;
 
-        // Prefer offhand
         if (preferOffhand.get() && mc.player.getOffHandStack().getItem() == Items.ENDER_PEARL) {
             usingOffhand = true;
-            if (debugChat.get()) ChatUtils.info("[APS] Using offhand pearl.");
+            apsDebug("Using offhand pearl.");
             return true;
         }
 
-        // Already holding a pearl in main hand
         if (mc.player.getMainHandStack().getItem() == Items.ENDER_PEARL) {
-            if (debugChat.get()) ChatUtils.info("[APS] Already holding pearl in main hand.");
+            apsDebug("Already holding pearl in main hand.");
             return true;
         }
 
-        // Try hotbar
         FindItemResult hotbarPearl = InvUtils.findInHotbar(Items.ENDER_PEARL);
         if (hotbarPearl.found()) {
             if (silentSwap.get()) {
-                if (debugChat.get()) ChatUtils.info("[APS] Silent-swapping to hotbar slot " + hotbarPearl.slot());
+                apsDebug("Silent-swapping to hotbar slot " + hotbarPearl.slot());
                 InvUtils.swap(hotbarPearl.slot(), true);
                 didSilentSwap = true;
             } else {
-                if (debugChat.get()) ChatUtils.info("[APS] Swapping to hotbar slot " + hotbarPearl.slot());
+                apsDebug("Swapping to hotbar slot " + hotbarPearl.slot());
                 InvUtils.swap(hotbarPearl.slot(), false);
                 didSilentSwap = false;
             }
             return true;
         }
 
-        // Pull from main inventory
         if (pullFromInventory.get()) {
             FindItemResult anyPearl = InvUtils.find(Items.ENDER_PEARL);
             if (anyPearl.found()) {
                 int toHotbar = pickHotbarSlot();
-                if (debugChat.get()) ChatUtils.info("[APS] Pulling pearl from inv slot " + anyPearl.slot() + " to hotbar " + toHotbar);
+                apsDebug("Pulling pearl from inv slot " + anyPearl.slot() + " to hotbar " + toHotbar);
                 InvUtils.move().from(anyPearl.slot()).toHotbar(toHotbar);
                 InvUtils.swap(toHotbar, silentSwap.get());
                 didMoveFromInv = true;
@@ -1119,7 +1102,7 @@ public class AutoPearlStasis extends Module {
             }
         }
 
-        if (debugChat.get()) ChatUtils.info("[APS] No pearls available.");
+        apsDebug("No pearls available.");
         return false;
     }
 
@@ -1130,45 +1113,42 @@ public class AutoPearlStasis extends Module {
     private void cleanupInventoryState(boolean didSwap, boolean didMove, int fromSlot, int toHotbar) {
         if (mc.player == null || mc.interactionManager == null) return;
 
-        // Revert silent swap
         if (didSwap) {
             try {
                 InvUtils.swapBack();
-                if (debugChat.get()) ChatUtils.info("[APS] Reverted silent swap.");
+                apsDebug("Reverted silent swap.");
             } catch (Throwable t) {
-                if (debugChat.get()) ChatUtils.info("[APS] Failed to revert silent swap: " + t.getMessage());
+                apsDebug("Failed to revert silent swap: " + t.getMessage());
             }
         }
 
-        // Restore pearl to original inventory slot
         if (didMove && toHotbar >= 0 && fromSlot >= 0) {
             ItemStack hotbarStack = safeGet(toHotbar);
             if (!hotbarStack.isEmpty() && hotbarStack.getItem() == Items.ENDER_PEARL) {
                 ItemStack original = safeGet(fromSlot);
                 if (canAcceptPearls(original)) {
-                    if (debugChat.get()) ChatUtils.info("[APS] Restoring pearl to original slot " + fromSlot);
+                    apsDebug("Restoring pearl to original slot " + fromSlot);
                     InvUtils.move().fromHotbar(toHotbar).to(fromSlot);
                 } else if (silentSwap.get() || swapBackOnStricterServers.get()) {
                     int stackable = findMainInvPearlStackSlot();
                     if (stackable >= 0) {
-                        if (debugChat.get()) ChatUtils.info("[APS] Merging pearl to stack slot " + stackable);
+                        apsDebug("Merging pearl to stack slot " + stackable);
                         InvUtils.move().fromHotbar(toHotbar).to(stackable);
                     } else {
                         int empty = findFirstEmptyMainSlot();
                         if (empty >= 0) {
-                            if (debugChat.get()) ChatUtils.info("[APS] Moving pearl to empty slot " + empty);
+                            apsDebug("Moving pearl to empty slot " + empty);
                             InvUtils.move().fromHotbar(toHotbar).to(empty);
                         } else {
-                            if (debugChat.get()) ChatUtils.info("[APS] Inventory full; leaving pearl in hotbar slot " + toHotbar);
+                            apsDebug("Inventory full; leaving pearl in hotbar slot " + toHotbar);
                         }
                     }
                 }
             } else {
-                if (debugChat.get()) ChatUtils.info("[APS] Hotbar slot " + toHotbar + " no longer holds pearl — nothing to restore.");
+                apsDebug("Hotbar slot " + toHotbar + " no longer holds pearl — nothing to restore.");
             }
         }
 
-        // Clear inventory state
         usingOffhand = false;
         didSilentSwap = false;
         didMoveFromInv = false;
@@ -1606,12 +1586,12 @@ public class AutoPearlStasis extends Module {
     }
 
     private void infoOnce(String message) {
-        if (debugChat.get()) ChatUtils.info("[APS] " + message);
+        if (debugChat.get()) apsDebug(message);
     }
 
     private void logState() {
         if (debugChat.get() && lastLoggedState != assistState) {
-            ChatUtils.info("[APS] State: " + assistState);
+            apsDebug("State: " + assistState);
             lastLoggedState = assistState;
         }
     }
@@ -1634,5 +1614,18 @@ public class AutoPearlStasis extends Module {
         if (mc.player.getOffHandStack().isOf(Items.TOTEM_OF_UNDYING))
             count += mc.player.getOffHandStack().getCount();
         return count;
+    }
+
+    // --------- Stainless tag helpers for this module ---------
+    private void apsDebug(String msg) {
+        // debug color (AQUA) via StainlessModule
+        sendDebugMsg("[APS] " + msg);
+    }
+    private void apsProxDebug(String msg) {
+        sendDebugMsg("[APS] [PROX] " + msg);
+    }
+    private void apsInfo(String msg) {
+        // normal info (GRAY) via StainlessModule
+        sendInfoMsg("[APS] " + msg);
     }
 }

@@ -1,17 +1,17 @@
-package com.autoconcrete.addon.modules;
+package xenon.addon.stainless.modules;
 
-import com.autoconcrete.addon.Xenon;
+import xenon.addon.stainless.Stainless;
+import xenon.addon.stainless.StainlessModule;
 import meteordevelopment.meteorclient.settings.BoolSetting;
 import meteordevelopment.meteorclient.settings.DoubleSetting;
 import meteordevelopment.meteorclient.settings.Setting;
 import meteordevelopment.meteorclient.settings.SettingGroup;
-import meteordevelopment.meteorclient.systems.modules.Module;
 
 /**
  * Anim/Render tweaks for end crystals & players.
  * Mixins read these via EntityAnimations.INSTANCE.
  */
-public class EntityAnimations extends Module {
+public class EntityAnimations extends StainlessModule {
     public static EntityAnimations INSTANCE;
 
     // Groups (sections in GUI)
@@ -102,7 +102,7 @@ public class EntityAnimations extends Module {
 
     public EntityAnimations() {
         // Put the module in your custom category
-        super(Xenon.XENON_CATEGORY, "Animations", "Crystal & player animation/scale controls.");
+        super(Stainless.STAINLESS_CATEGORY, "EntityAnimations", "Crystal & player animation/scale controls.");
         INSTANCE = this;
     }
 }

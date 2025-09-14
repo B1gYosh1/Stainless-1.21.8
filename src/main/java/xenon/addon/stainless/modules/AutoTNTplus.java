@@ -1,10 +1,10 @@
-package com.autoconcrete.addon.modules;
+package xenon.addon.stainless.modules;
 
-import com.autoconcrete.addon.Xenon;
+import xenon.addon.stainless.Stainless;
+import xenon.addon.stainless.StainlessModule;
 import meteordevelopment.meteorclient.events.game.OpenScreenEvent;
 import meteordevelopment.meteorclient.events.world.TickEvent;
 import meteordevelopment.meteorclient.settings.*;
-import meteordevelopment.meteorclient.systems.modules.Module;
 import meteordevelopment.meteorclient.utils.entity.EntityUtils;
 import meteordevelopment.meteorclient.utils.entity.SortPriority;
 import meteordevelopment.meteorclient.utils.entity.TargetUtils;
@@ -24,9 +24,7 @@ import net.minecraft.util.math.BlockPos;
 import net.minecraft.util.math.Direction;
 import net.minecraft.util.math.Vec3d;
 
-import static com.autoconcrete.addon.Xenon.XENON_CATEGORY;
-
-public class AutoTNTplus extends Module {
+public class AutoTNTplus extends StainlessModule {
     private final SettingGroup sgGeneral = settings.getDefaultGroup();
 
     private final Setting<Double> range = sgGeneral.add(new DoubleSetting.Builder()
@@ -72,7 +70,7 @@ public class AutoTNTplus extends Module {
     private int movedCooldown = 0;
 
     public AutoTNTplus() {
-        super(XENON_CATEGORY, "AutoTNTplus", "Places obsidian pillars, places TNT, and ignites it automatically.");
+        super(Stainless.STAINLESS_CATEGORY, "AutoTntPlus", "Automatically drop tnt on enemies.");
     }
 
     @Override

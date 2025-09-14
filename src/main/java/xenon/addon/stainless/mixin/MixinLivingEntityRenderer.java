@@ -1,7 +1,6 @@
-// src/main/java/com/autoconcrete/addon/mixin/MixinLivingEntityRenderer.java
-package com.autoconcrete.addon.mixin;
+package xenon.addon.stainless.mixin;
 
-import com.autoconcrete.addon.modules.EntityAnimations;
+import xenon.addon.stainless.modules.EntityAnimations;
 import net.minecraft.client.render.VertexConsumerProvider;
 import net.minecraft.client.render.entity.LivingEntityRenderer;
 import net.minecraft.client.render.entity.state.EntityRenderState;

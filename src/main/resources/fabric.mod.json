@@ -2,8 +2,8 @@
   "schemaVersion": 1,
   "id": "auto-concrete-addon",
   "version": "${version}",
-  "name": "Xenon's Addon",
-  "description": "Pvp addon <3.",
+  "name": "Stainless",
+  "description": "Pvp Addon <3.",
   "authors": [
     "Xenon_ne"
   ],
@@ -14,14 +14,14 @@
   "environment": "client",
   "entrypoints": {
     "meteor": [
-      "com.autoconcrete.addon.Xenon"
+      "xenon.addon.stainless.Stainless"
     ]
   },
   "mixins": [
-    "mixins.autoconcrete.json"
+    "stainless.mixins.json"
   ],
   "custom": {
-    "meteor-client:color": "255,182,193"
+    "meteor-client:color": "50,50,50"
   },
   "depends": {
     "java": ">=21",

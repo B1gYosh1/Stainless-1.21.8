@@ -1,9 +1,9 @@
-package com.autoconcrete.addon.modules;
+package xenon.addon.stainless.modules;
 
-import com.autoconcrete.addon.Xenon;
+import xenon.addon.stainless.Stainless;
+import xenon.addon.stainless.StainlessModule;
 import meteordevelopment.meteorclient.events.world.TickEvent;
 import meteordevelopment.meteorclient.settings.*;
-import meteordevelopment.meteorclient.systems.modules.Module;
 import meteordevelopment.meteorclient.utils.entity.SortPriority;
 import meteordevelopment.meteorclient.utils.entity.TargetUtils;
 import meteordevelopment.meteorclient.utils.player.FindItemResult;
@@ -19,7 +19,7 @@ import net.minecraft.item.Item;
 import net.minecraft.util.math.BlockPos;
 import net.minecraft.util.math.Box;
 
-public class AntiConcrete extends Module {
+public class AntiConcrete extends StainlessModule {
     private final SettingGroup sgGeneral = settings.getDefaultGroup();
 
     private final Setting<Mode> mode = sgGeneral.add(new EnumSetting.Builder<Mode>()
@@ -76,7 +76,7 @@ public class AntiConcrete extends Module {
     private int noButtonCooldown = 0;
 
     public AntiConcrete() {
-        super(Xenon.XENON_CATEGORY, "anti-concrete", "Places a button under yourself when enemies are nearby or dropping blocks.");
+        super(Stainless.STAINLESS_CATEGORY, "AntiConcrete", "Places a button under yourself when enemies are nearby or dropping blocks above you.");
     }
 
     @EventHandler

@@ -1,10 +1,10 @@
-package com.autoconcrete.addon.modules;
+package xenon.addon.stainless.modules;
 
-import com.autoconcrete.addon.Xenon;
+import xenon.addon.stainless.Stainless;
+import xenon.addon.stainless.StainlessModule;
 import meteordevelopment.meteorclient.events.world.TickEvent;
 import meteordevelopment.meteorclient.settings.*;
 import meteordevelopment.meteorclient.systems.friends.Friends;
-import meteordevelopment.meteorclient.systems.modules.Module;
 import meteordevelopment.meteorclient.utils.player.FindItemResult;
 import meteordevelopment.meteorclient.utils.player.InvUtils;
 import meteordevelopment.meteorclient.utils.player.Rotations;
@@ -25,7 +25,7 @@ import net.minecraft.world.RaycastContext;
 import java.util.ArrayList;
 import java.util.List;
 
-public class AntiFeetplace extends Module {
+public class AntiFeetplace extends StainlessModule {
     // ---------- settings ----------
     private final SettingGroup sgGeneral = settings.getDefaultGroup();
     private final SettingGroup sgFilters = settings.createGroup("Filters");
@@ -154,8 +154,7 @@ public class AntiFeetplace extends Module {
     private int nextMineAllowedAt = 0;
 
     public AntiFeetplace() {
-        super(Xenon.XENON_CATEGORY, "Anti-Feetplace",
-            "Targets below & surround, places an ender chest under surround, then an obsidian beside it for crystal.");
+        super(Stainless.STAINLESS_CATEGORY, "AntiFeetPlace", "Interrupts Enemies FeetPlace with ender-chests.");
     }
 
     @Override

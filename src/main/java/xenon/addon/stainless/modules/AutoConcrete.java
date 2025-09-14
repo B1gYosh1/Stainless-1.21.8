@@ -1,10 +1,10 @@
-package com.autoconcrete.addon.modules;
+package xenon.addon.stainless.modules;
 
-import com.autoconcrete.addon.Xenon;
+import xenon.addon.stainless.Stainless;
+import xenon.addon.stainless.StainlessModule;
 import meteordevelopment.meteorclient.events.game.OpenScreenEvent;
 import meteordevelopment.meteorclient.events.world.TickEvent;
 import meteordevelopment.meteorclient.settings.*;
-import meteordevelopment.meteorclient.systems.modules.Module;
 import meteordevelopment.meteorclient.utils.entity.EntityUtils;
 import meteordevelopment.meteorclient.utils.entity.SortPriority;
 import meteordevelopment.meteorclient.utils.entity.TargetUtils;
@@ -20,7 +20,7 @@ import net.minecraft.entity.player.PlayerEntity;
 import net.minecraft.util.math.BlockPos;
 import net.minecraft.util.math.Direction;
 
-public class AutoConcrete extends Module {
+public class AutoConcrete extends StainlessModule {
     private final SettingGroup sgGeneral = settings.getDefaultGroup();
 
     private final Setting<Double> range = sgGeneral.add(new DoubleSetting.Builder()
@@ -67,7 +67,7 @@ public class AutoConcrete extends Module {
     private int cooldown = 0;
 
     public AutoConcrete() {
-        super(Xenon.XENON_CATEGORY, "auto-concrete", "Drops falling blocks (concrete, sand, gravel, etc.) above enemies' heads.");
+        super(Stainless.STAINLESS_CATEGORY, "AutoConcrete", "Drops falling blocks above enemies' heads.");
     }
 
     @Override

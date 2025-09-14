@@ -1,4 +1,4 @@
-package com.autoconcrete.addon.mixin;
+package xenon.addon.stainless.mixin;
 
 import net.minecraft.entity.LivingEntity;
 import net.minecraft.entity.LimbAnimator; // 1.21.x location

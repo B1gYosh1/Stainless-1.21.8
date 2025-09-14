@@ -1,11 +1,11 @@
-package com.autoconcrete.addon.modules;
+package xenon.addon.stainless.modules;
 
-import com.autoconcrete.addon.Xenon;
+import xenon.addon.stainless.Stainless;
+import xenon.addon.stainless.StainlessModule;
 import meteordevelopment.meteorclient.events.render.Render3DEvent;
 import meteordevelopment.meteorclient.events.world.TickEvent;
 import meteordevelopment.meteorclient.renderer.ShapeMode;
 import meteordevelopment.meteorclient.settings.*;
-import meteordevelopment.meteorclient.systems.modules.Module;
 import meteordevelopment.meteorclient.utils.misc.Pool;
 import meteordevelopment.meteorclient.utils.player.FindItemResult;
 import meteordevelopment.meteorclient.utils.player.InvUtils;
@@ -27,7 +27,7 @@ import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.List;
 
-public class BetterScaffold extends Module {
+public class BetterScaffold extends StainlessModule {
     private final SettingGroup sgGeneral = settings.getDefaultGroup();
     private final SettingGroup sgRender = settings.createGroup("Render");
 
@@ -180,11 +180,14 @@ public class BetterScaffold extends Module {
     private double lastSneakingY;
 
     public BetterScaffold() {
-        super(Xenon.XENON_CATEGORY, "betterScaffold", "Automatically places blocks under you. Credits to MeteorTweaks.");
+        super(Stainless.STAINLESS_CATEGORY, "BetterScaffold",
+            "Automatically places blocks under you. (Credits to TrouserSteak).");
     }
 
     @Override
     public void onActivate() {
+        super.onActivate();
+
         if (mc.player == null) return;
         initialY = mc.player.getBlockY()-1;
         lastWasSneaking = mc.options.sneakKey.isPressed();
@@ -199,6 +202,8 @@ public class BetterScaffold extends Module {
 
     @Override
     public void onDeactivate() {
+        super.onDeactivate();
+
         for (RenderBlock renderBlock : renderBlocks) renderBlockPool.free(renderBlock);
         renderBlocks.clear();
     }

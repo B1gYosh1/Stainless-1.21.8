@@ -1,7 +1,7 @@
-package com.autoconcrete.addon.mixin;
+package xenon.addon.stainless.mixin;
 
-import com.autoconcrete.addon.mixinhelper.CrystalPartGate;
-import com.autoconcrete.addon.modules.EntityAnimations;
+import xenon.stainless.mixin.mixinhelper.CrystalPartGate;
+import xenon.addon.stainless.modules.EntityAnimations;
 import net.minecraft.client.render.VertexConsumerProvider;
 import net.minecraft.client.render.entity.EndCrystalEntityRenderer;
 import net.minecraft.client.render.entity.state.EndCrystalEntityRenderState;

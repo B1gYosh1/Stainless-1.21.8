@@ -1,6 +1,6 @@
-package com.autoconcrete.addon.mixin;
+package xenon.addon.stainless.mixin;
 
-import com.autoconcrete.addon.mixinhelper.CrystalPartGate;
+import xenon.stainless.mixin.mixinhelper.CrystalPartGate;
 import net.minecraft.client.model.ModelPart;
 import net.minecraft.client.render.VertexConsumer;
 import net.minecraft.client.util.math.MatrixStack;

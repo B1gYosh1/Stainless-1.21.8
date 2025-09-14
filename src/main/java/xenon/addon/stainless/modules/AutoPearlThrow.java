@@ -1,10 +1,10 @@
-package com.autoconcrete.addon.modules;
+package xenon.addon.stainless.modules;
 
-import com.autoconcrete.addon.Xenon;
+import xenon.addon.stainless.Stainless;
+import xenon.addon.stainless.StainlessModule;
 import meteordevelopment.meteorclient.events.packets.PacketEvent;
 import meteordevelopment.meteorclient.events.world.TickEvent;
 import meteordevelopment.meteorclient.settings.*;
-import meteordevelopment.meteorclient.systems.modules.Module;
 import meteordevelopment.meteorclient.utils.player.FindItemResult;
 import meteordevelopment.meteorclient.utils.player.InvUtils;
 import meteordevelopment.meteorclient.utils.player.Rotations;
@@ -18,7 +18,7 @@ import net.minecraft.util.math.MathHelper;
 import net.minecraft.util.math.Vec3d;
 import net.minecraft.world.RaycastContext;
 
-public class AutoPearlThrow extends Module {
+public class AutoPearlThrow extends StainlessModule {
     // ----- Groups -----
     private final SettingGroup sgGeneral = settings.getDefaultGroup();
     private final SettingGroup sgAiming  = settings.createGroup("Aiming");
@@ -203,8 +203,7 @@ public class AutoPearlThrow extends Module {
     private long lastThrowAt = 0L;
 
     public AutoPearlThrow() {
-        super(Xenon.XENON_CATEGORY, "Auto Pearl Throw",
-            "Throws an ender pearl away from danger on totem pop, with 360° auto-aim, wall-avoid, jump, and auto pitch.");
+        super(Stainless.STAINLESS_CATEGORY, "AutoPearlThrow", "Automatically throws pearl on totem pop.");
     }
 
     @Override public void onDeactivate() {

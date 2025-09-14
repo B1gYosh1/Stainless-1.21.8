@@ -1,9 +1,10 @@
 {
   "required": false,
   "minVersion": "0.8",
-  "package": "com.autoconcrete.addon.mixin",
+  "package": "xenon.addon.stainless.mixin",
   "compatibilityLevel": "JAVA_21",
   "client": [
+    "ChatUtilsToggleMixin",
     "MixinEndCrystalEntityRenderer",
     "MixinModelPart",
     "MixinLivingEntityRenderer"
