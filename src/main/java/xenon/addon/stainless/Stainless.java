@@ -29,7 +29,6 @@ public class Stainless extends MeteorAddon {
         Modules.get().add(new AntiConcreteDetection());
         Modules.get().add(new AntiFeetplace());
         Modules.get().add(new AutoConcrete());
-        Modules.get().add(new AutoMine());
         Modules.get().add(new AutoMinePlus());
         Modules.get().add(new AutoPearlStasis());
         Modules.get().add(new AutoPearlThrow());
