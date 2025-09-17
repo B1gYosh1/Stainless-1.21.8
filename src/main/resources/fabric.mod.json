@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "id": "auto-concrete-addon",
+  "id": "stainless",
   "version": "${version}",
   "name": "Stainless",
   "description": "Pvp Addon <3.",
