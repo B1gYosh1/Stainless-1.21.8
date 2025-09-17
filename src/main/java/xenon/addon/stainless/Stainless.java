@@ -25,16 +25,17 @@ public class Stainless extends MeteorAddon {
     }
 
         private void initializeModules(Modules modules) {
-        modules.add(new AutoConcrete());
         Modules.get().add(new AntiConcrete());
-        Modules.get().add(new AutoTNTplus());
         Modules.get().add(new AntiConcreteDetection());
-        Modules.get().add(new AutoMinePlus());
-        Modules.get().add(new AutoPearlThrow());
-        Modules.get().add(new AutoWebFeetPlace());
         Modules.get().add(new AntiFeetplace());
-        Modules.get().add(new BetterScaffold());
+        Modules.get().add(new AutoConcrete());
+        Modules.get().add(new AutoMine());
+        Modules.get().add(new AutoMinePlus());
         Modules.get().add(new AutoPearlStasis());
+        Modules.get().add(new AutoPearlThrow());
+        Modules.get().add(new AutoTNTplus());
+        Modules.get().add(new AutoWebFeetPlace());
+        Modules.get().add(new BetterScaffold());
         Modules.get().add(new EntityAnimations());
     }
 
