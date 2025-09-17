@@ -408,7 +408,7 @@ public class AutoMinePlus extends StainlessModule {
         return stack != null && !stack.isEmpty() && stack.get(DataComponentTypes.FOOD) != null;
     }
 
-    // ---------- BlackOut-style gradient render (driven by breakProgress) ----------
+    // ----------gradient render----------
     private Color getColor(SettingColor start, SettingColor end, double progress, double alphaMulti) {
         return new Color(
             lerp(start.r, end.r, progress, 1),
