@@ -1,6 +1,6 @@
 # Stainless
 
-Meteor Client addon for Minecraft 1.21.5 that includes PvP tools
+Meteor Client addon for Minecraft 1.21.8 that includes PvP tools
 
 ---
 
